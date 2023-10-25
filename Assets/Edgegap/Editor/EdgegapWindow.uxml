@@ -1,52 +1,60 @@
-<?xml version="1.0" encoding="utf-8"?>
-<engine:UXML
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xmlns:engine="UnityEngine.UIElements"
-    xmlns:editor="UnityEditor.UIElements"
-	xmlns:uie="UnityEditor.UIElements"
->
-	<engine:VisualElement class="content">
-		<engine:VisualElement class="background" />
-		<engine:Label class="text__title" text="Edgegap server management" />
-
-		<engine:ScrollView>
-			<engine:VisualElement class="container">
-				<engine:TextField name="apiKey" label="API key" password="true" view-data-key="apiKey" />
-				<uie:EnumField name="environmentSelect" label="API environment" include-obsolete-values="false"/>
-				<engine:TextField name="appName" label="App name" view-data-key="appName" />
-				<engine:TextField name="appVersionName" label="App version" view-data-key="appVersionName" />
-			</engine:VisualElement>
-
-			<engine:VisualElement class="container">
-				<engine:VisualElement class="flex flex--right">
-					<engine:Label name="connectionStatusLabel" class="text--muted" text="Awaiting connection" />
-					<engine:Button name="connectionBtn" />
-				</engine:VisualElement>
-			</engine:VisualElement>
-
-			<engine:VisualElement class="container">
-				<engine:TextField name="containerRegistry" tooltip="ex: docker.io or harbor.edgegap.net" label="Container Registry" view-data-key="containerRegistry" />
-				<engine:TextField name="containerImageRepo" tooltip="ex: edgegap/image" label="Image repository" view-data-key="containerImageRepo" />
-				<engine:TextField name="tag" label="Tag" tooltip="ex: 1.2" view-data-key="tag" />
-				<engine:Toggle name="autoIncrementTag" tooltip="Auto increment the tag on build for quicker iteration" label="Increment tag on build"  />
-			</engine:VisualElement>
-
-			
-			<engine:VisualElement class="container" />
-
-			<engine:VisualElement class="container">
-			<engine:VisualElement class="flex">
-					<engine:Button name="buildAndPushBtn" text="Build and Push" />
-					<engine:Button name="serverActionBtn" />
-				</engine:VisualElement>
-				
-			</engine:VisualElement>
-
-			<engine:VisualElement name="serverDataContainer" />
-
-			<engine:VisualElement class="container flex flex--right">
-				<engine:Button name="documentationBtn" text="Documentation" tooltip="Opens the documentation website. The website version changes depending on the selected API environment."/>
-			</engine:VisualElement>
-		</engine:ScrollView>
-	</engine:VisualElement>
-</engine:UXML>
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/Edgegap/Editor/EdgegapWindow.uss?fileID=7433441132597879392&amp;guid=b1a2e4572c5de8840ac8d98377d409ae&amp;type=3#EdgegapWindow" />
+    <ui:VisualElement class="content">
+        <ui:VisualElement name="header-container" style="flex-grow: 1; flex-direction: row; height: 100px; background-color: rgb(37, 37, 37); left: 0;">
+            <ui:VisualElement name="header-logo-img" style="height: 100px; width: 100px; flex-direction: row; background-image: url(&apos;project://database/Assets/Edgegap/Editor/Images/logo_transparent_400_alpha25.png?fileID=2800000&amp;guid=b7012da4ebf9008458abc3ef9a741f3c&amp;type=3#logo_transparent_400_alpha25&apos;); -unity-background-scale-mode: scale-to-fit; -unity-slice-left: 15; -unity-slice-top: 15; -unity-slice-right: 15; -unity-slice-bottom: 15;" />
+            <ui:Label text="EDGEGAP" name="header-logo-txt" class="text__title" style="flex-direction: row; flex-grow: 1; color: rgb(255, 255, 255); font-size: 30px; -unity-text-align: middle-left; -unity-font-style: bold;" />
+        </ui:VisualElement>
+        <ui:ScrollView style="background-color: rgb(37, 37, 37); height: 762px;">
+            <ui:GroupBox name="ApiTokenHorizGroupBox" class="container-row-parent" style="flex-direction: row;">
+                <ui:TextField name="ApiTokenTxt" label="API Token" password="true" view-data-key="apiKey" class="text-edgegap" style="width: 400px;" />
+                <ui:Button name="BuildAndPushPurpleBtn" text="Verify" class="button-edgegap text-edgegap bg-purple" />
+                <ui:Button name="GetATokenBtn" text="Get a Token" class="button-edgegap text-edgegap" />
+            </ui:GroupBox>
+            <ui:Foldout text="Application Info" name="ApplicationInfoFoldout" class="text-edgegap">
+                <ui:TextField name="applicationNameTxt" label="Application Name" view-data-key="appName" class="text-edgegap" />
+                <ui:TextField label="Application Icon" view-data-key="appName" class="text-edgegap" />
+                <ui:Button name="SelectFileBtn" text="Select File" class="button-edgegap text-edgegap" />
+                <ui:Label tabindex="-1" text="Limit 200kb" parse-escape-sequences="true" display-tooltip-when-elided="true" class="text-edgegap" style="font-size: 10px; color: rgb(147, 147, 147);" />
+                <ui:Button name="CreateApplicationBtn" text="Create Application" class="button-edgegap text-edgegap" />
+            </ui:Foldout>
+            <ui:VisualElement name="HorizFoldout" style="flex-grow: 1; flex-direction: row;">
+                <ui:Toggle name="UseCustomContainerRegistryChk" tooltip="Auto increment the tag on build for quicker iteration" label="Use Custom Container Registry" class="text-edgegap" style="flex-grow: 0; flex-wrap: nowrap; flex-direction: row; align-items: auto; align-self: auto; position: absolute; right: 100px;" />
+                <ui:Foldout text="Container Registry" name="ContainerRegistryFoldout" class="text-edgegap" style="flex-grow: 1;">
+                    <ui:TextField name="RegistryURLTxt" label="Registry URL" view-data-key="appName" class="text-edgegap" style="width: 366px;" />
+                    <ui:TextField name="RepositoryTxt" label="Repository" view-data-key="appName" class="text-edgegap" />
+                    <ui:TextField name="UsernameTxt" label="Username" view-data-key="appName" class="text-edgegap" />
+                    <ui:TextField name="TokenTxt" label="Username" view-data-key="appName" class="text-edgegap" />
+                </ui:Foldout>
+            </ui:VisualElement>
+            <ui:GroupBox name="BuildAndPushHorizGroupBox" style="flex-direction: row; justify-content: flex-start; align-items: stretch; align-self: flex-end;">
+                <ui:Button name="BuildAndPushBtn" text="Build and Push" class="button-edgegap text-edgegap" />
+            </ui:GroupBox>
+            <ui:Foldout text="Deployments" name="DeploymentsFoldout" class="text-edgegap">
+                <ui:GroupBox name="DeploymentsHorizGroupBox" style="flex-direction: row; justify-content: flex-start; align-items: stretch; align-self: flex-start;">
+                    <ui:Button name="RefreshBtn" text="Refresh" class="button-edgegap text-edgegap" style="flex-grow: 0.5;" />
+                    <ui:Button name="CreateNewDeploymentBtn" text="Create New Deployment" class="button-edgegap text-edgegap" style="flex-grow: 0.5;" />
+                </ui:GroupBox>
+                <ui:GroupBox name="DeploymentHeadersGroupBox" class="container-row-parent" style="flex-direction: row;">
+                    <ui:Label name="connectionURLHeaderLabel" text="URL" class="text--muted" style="flex-grow: 1;" />
+                    <ui:Label name="connectionStatusHeaderLabel" text="Status" class="text--muted" style="flex-grow: 0.5;" />
+                    <ui:Label name="connectionControlHeaderLabel" text="Control" class="text--muted" style="flex-grow: 0.5;" />
+                </ui:GroupBox>
+                <ui:GroupBox name="DeploymentsGroupBox" style="flex-direction: row;">
+                    <ui:Label name="ConnectionURLLabel" text="{foo.edgegap.net:12345}" class="text--muted" style="flex-grow: 1;" />
+                    <ui:Label name="ConnectionStatusLabel" text="{Awaiting Connection}" class="text--muted" style="flex-grow: 0.5; flex-direction: column;" />
+                    <ui:Button name="ServerActionBtn" text="{Start | Stop}" class="button-edgegap text-edgegap" style="flex-grow: 0.5;" />
+                </ui:GroupBox>
+            </ui:Foldout>
+            <ui:VisualElement class="container" />
+            <ui:VisualElement class="container">
+                <ui:VisualElement class="flex" />
+            </ui:VisualElement>
+            <ui:VisualElement name="ServerDataContainer" />
+            <ui:GroupBox name="DeploymentHeadersVertGroupBox" class="container-row-parent" style="flex-direction: column; justify-content: center; align-items: center;">
+                <ui:Label tabindex="-1" text="Need more than one game server?" parse-escape-sequences="true" display-tooltip-when-elided="true" name="DocsLabel" class="text-edgegap" style="-unity-font-style: bold; font-size: 10px;" />
+                <ui:Button text="Click Here!" tooltip="Opens the documentation website. The website version changes depending on the selected API environment." name="DocsClickHerePurpleWideBtn" class="button-edgegap text-edgegap bg-purple" />
+            </ui:GroupBox>
+        </ui:ScrollView>
+    </ui:VisualElement>
+</ui:UXML>

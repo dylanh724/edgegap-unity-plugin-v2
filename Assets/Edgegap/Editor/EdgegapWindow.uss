@@ -1,12 +1,12 @@
 #serverDataContainer {
-    margin: 4px 0px 0px 0px;
+    margin: 4px 0 0 0;
 }
 
 .content {
     position: relative;
     height: auto;
     overflow: hidden;
-    padding: 8px 0px 8px 0px;
+    padding: 8px 0 8px 0;
 }
 
 .background {
@@ -15,7 +15,7 @@
     width: 400px;
     top: -10px;
     right: -150px;
-    background-image: url("./Images/logo_transparent_400_alpha25.png");
+    background-image: url('project://database/Assets/Edgegap/Editor/Images/logo_transparent_400_alpha25.png?fileID=21300000&guid=b7012da4ebf9008458abc3ef9a741f3c&type=3#logo_transparent_400_alpha25');
     -unity-background-scale-mode: scale-and-crop;
 }
 
@@ -25,15 +25,15 @@
     padding-top: 8px;
     padding-bottom: 8px;
     -unity-text-align: middle-center;
-    -unity-font: url("./Fonts/BaronNeue.otf");
+    -unity-font: url('project://database/Assets/Edgegap/Editor/Fonts/BaronNeue.otf?fileID=12800000&guid=fb67205c672fbb04d829783b9f771fc9&type=3#BaronNeue');
 }
 
 .text--muted {
-    color: #8a8a8a;
+    color: rgb(138, 138, 138);
 }
 
 .text--success {
-    color: #90be6d;
+    color: rgb(144, 190, 109);
 }
 
 .container {
@@ -57,4 +57,66 @@
 
 .flex--between {
     justify-content: space-between;
+}
+
+#unity-text-input {
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+    border-bottom-right-radius: 5px;
+    border-bottom-left-radius: 5px;
+    color: rgb(255, 0, 0);
+    border-top-width: 1px;
+    border-right-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    height: 27px;
+}
+
+.button-edgegap {
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+    border-bottom-right-radius: 5px;
+    border-bottom-left-radius: 5px;
+    border-top-width: 2px;
+    border-right-width: 2px;
+    border-bottom-width: 2px;
+    border-left-width: 2px;
+    border-left-color: rgba(0, 0, 0, 0.35);
+    border-right-color: rgba(0, 0, 0, 0.35);
+    border-top-color: rgba(0, 0, 0, 0.35);
+    border-bottom-color: rgba(0, 0, 0, 0.35);
+    height: 30px;
+    -unity-font-style: bold;
+    background-color: rgb(173, 173, 173);
+}
+
+.container-row-parent {
+    background-color: rgb(49, 49, 49);
+    border-top-color: rgb(0, 0, 0);
+    border-bottom-color: rgb(0, 0, 0);
+    border-top-width: 1px;
+    border-right-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+}
+
+.text-edgegap {
+    font-size: 12px;
+    color: rgb(222, 222, 222);
+}
+
+.text-btnTxt {
+    font-size: 12px;
+    color: rgb(255, 255, 255);
+    -unity-font-style: bold;
+}
+
+Toggle > #unity-checkmark {
+}
+
+.unity-foldout > #unity-checkmark {
+}
+
+.bg-purple {
+    background-color: rgb(44, 30, 210);
 }
