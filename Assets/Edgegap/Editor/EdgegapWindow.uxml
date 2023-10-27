@@ -7,71 +7,72 @@
         </ui:VisualElement>
         <ui:ScrollView style="background-color: rgb(37, 37, 37); height: 815px; justify-content: flex-end;">
             <ui:GroupBox name="ApiTokenHorizGroupBox" class="container-row-parent" style="flex-direction: row; margin-left: 0; margin-right: 0; margin-bottom: 10px; align-items: center; justify-content: flex-start; align-self: auto; padding-bottom: 0; padding-top: 0;">
-                <ui:TextField name="ApiTokenTxt" label="&lt;b&gt;API Token&lt;/b&gt;" view-data-key="appName" class="text-edgegap" style="padding-left: 25px; flex-grow: 0.17;" />
-                <ui:Button name="BuildAndPushPurpleBtn" text="Verify" class="button-edgegap text-edgegap bg-purple" style="min-width: 75px; -unity-font-style: bold;" />
-                <ui:Button name="GetATokenBtn" text="Get a Token" class="button-edgegap text-edgegap" style="-unity-font-style: bold; width: 125px; max-width: none; min-width: auto;" />
+                <ui:TextField name="ApiTokenTxt" label="&lt;b&gt;API Token&lt;/b&gt;" view-data-key="appName" tooltip="No token? Click the &quot;Get a Token&quot; button &gt;&gt; Click &quot;Verify&quot; after entered to unlock other features" class="text-edgegap" style="padding-left: 25px; flex-grow: 0.17;" />
+                <ui:Button name="ApiTokenVerifyPurpleBtn" text="Verify" class="button-edgegap text-edgegap bg-purple" style="min-width: 75px; -unity-font-style: bold;" />
+                <ui:Button name="ApiTokenGetBtn" text="Get a Token" class="button-edgegap text-edgegap" style="-unity-font-style: bold; width: 125px; max-width: none; min-width: auto;" />
             </ui:GroupBox>
-            <ui:VisualElement name="PostAuthContainer" style="flex-grow: 1;">
+            <ui:VisualElement name="PostAuthContainer" style="flex-grow: 1; display: flex;">
                 <ui:Foldout text="&lt;b&gt;Application Info&lt;/b&gt;" name="ApplicationInfoFoldout" class="text-edgegap container-row-parent" style="margin-left: 0; -unity-font-style: normal;">
                     <ui:VisualElement name="ApplicationNameRow" class="container-row" style="flex-grow: 1; align-items: center; flex-direction: row; justify-content: flex-start; align-self: auto;">
-                        <ui:TextField name="ApplicationNameTxt" label="Application Name" view-data-key="appName" class="text-edgegap" style="flex-grow: 0; flex-shrink: 1; flex-direction: row; flex-wrap: nowrap;" />
+                        <ui:TextField name="ApplicationNameTxt" label="Application Name" view-data-key="appName" tooltip="Arbitrary application name" class="text-edgegap" style="flex-grow: 0; flex-shrink: 1; flex-direction: row; flex-wrap: nowrap;" />
                     </ui:VisualElement>
                     <ui:VisualElement name="ApplicationIconRow" class="container-row" style="flex-grow: 1;">
-                        <ui:VisualElement name="ApplicationIconHorizGroup" style="flex-grow: 1; flex-direction: row; align-items: auto;">
-                            <ui:TextField label="Application Icon" view-data-key="appName" name="ApplicationIconTxt" class="text-edgegap" style="flex-grow: 0;" />
+                        <ui:VisualElement name="ApplicationIconHorizGroup" class="text-edgegap" style="flex-grow: 1; flex-direction: row; align-items: center; justify-content: flex-start; align-self: stretch; width: 600px;">
+                            <uie:ObjectField label="Application Icon" type="UnityEngine.Sprite, UnityEngine.CoreModule" name="ApplicationIconSprite" tooltip="Choose a Sprite image to use as an app icon" style="align-items: center; justify-content: flex-start; align-self: center; width: 395px;" />
                             <ui:VisualElement name="SelectFileVertGroup" style="flex-grow: 0.7;">
                                 <ui:VisualElement name="SelectFileHorizGroup" style="flex-grow: 1; flex-direction: row; align-items: center;">
-                                    <ui:Button name="SelectFileBtn" text="Select File" class="button-edgegap text-edgegap" style="width: 125px; max-width: none; min-width: auto;" />
-                                    <ui:Label tabindex="-1" text="Limit 200kb" parse-escape-sequences="true" display-tooltip-when-elided="true" name="SelectFileSizeLimitTooltip" class="text-edgegap" style="font-size: 10px; color: rgb(147, 147, 147);" />
+                                    <ui:Label tabindex="-1" text="Limit 200kb" parse-escape-sequences="true" display-tooltip-when-elided="true" name="SelectFileSizeLimitTooltipLabel" class="text-edgegap" style="font-size: 10px; color: rgb(147, 147, 147);" />
                                 </ui:VisualElement>
                             </ui:VisualElement>
                         </ui:VisualElement>
                     </ui:VisualElement>
-                    <ui:Button name="CreateApplicationBtn" text="Create Application" class="button-edgegap text-edgegap" style="flex-direction: row; -unity-text-align: middle-center; margin-left: 0;" />
+                    <ui:Button name="ApplicationCreateBtn" text="Create Application" class="button-edgegap text-edgegap" style="flex-direction: row; -unity-text-align: middle-center; margin-left: 0;" />
                 </ui:Foldout>
                 <ui:VisualElement name="HorizFoldout" class="container-row-parent" style="flex-grow: 1; flex-direction: row;">
                     <ui:Foldout text="&lt;b&gt;Container Registry&lt;/b&gt;" name="ContainerRegistryFoldout" class="text-edgegap" style="flex-grow: 1; padding-bottom: 0; padding-top: 0; padding-right: 0; padding-left: 0;">
-                        <ui:VisualElement name="UseCustomContainerRegistryRow" class="container-row" style="flex-grow: 1; align-items: center; flex-direction: row; justify-content: flex-start; align-self: auto; padding-top: 5px; padding-bottom: 5px;">
-                            <ui:Toggle name="UseCustomContainerRegistryChk" tooltip="Auto increment the tag on build for quicker iteration" label="Use Custom Container Registry" class="text-edgegap checkmark-edgegap" style="justify-content: flex-start; align-self: flex-start; flex-direction: row-reverse; align-items: center; padding-left: 3px;" />
+                        <ui:VisualElement name="CustomContainerRegistryWrapper" style="flex-grow: 1;">
+                            <ui:VisualElement name="UseCustomContainerRegistryRow" class="container-row" style="flex-grow: 1; align-items: center; flex-direction: row; justify-content: flex-start; align-self: auto; padding-top: 5px; padding-bottom: 5px;">
+                                <ui:Toggle name="UseCustomContainerRegistryChk" label="Use Custom Container Registry" class="text-edgegap checkmark-edgegap" style="justify-content: flex-start; align-self: center; flex-direction: row-reverse; align-items: center; padding-left: 3px;" />
+                            </ui:VisualElement>
+                            <ui:VisualElement name="RegistryUrlRow" class="container-row" style="flex-grow: 1; align-items: center; flex-direction: row; justify-content: flex-start; align-self: auto;">
+                                <ui:TextField name="ContainerRegistryUrlTxt" label="Registry URL" view-data-key="appName" tooltip="eg: `docker.io`, `harbor.edgegap.net`" class="text-edgegap" />
+                            </ui:VisualElement>
+                            <ui:VisualElement name="RepositoryRow" class="container-row" style="flex-grow: 1; align-items: center; flex-direction: row; justify-content: flex-start; align-self: auto;">
+                                <ui:TextField name="ContainerImageRepositoryTxt" label="Repository" view-data-key="appName" tooltip="eg: edgegap-public/tutorial" class="text-edgegap" />
+                            </ui:VisualElement>
+                            <ui:VisualElement name="UsernameRow" class="container-row" style="flex-grow: 1; align-items: center; flex-direction: row; justify-content: flex-start; align-self: auto;">
+                                <ui:TextField name="ContainerUsernameTxt" label="Username" view-data-key="appName" tooltip="Custom registry username" class="text-edgegap" />
+                            </ui:VisualElement>
+                            <ui:VisualElement name="TokenRow" class="container-row" style="flex-grow: 1; align-items: center; flex-direction: row; justify-content: flex-start; align-self: auto;">
+                                <ui:TextField name="ContainerTokenTxt" label="Token" view-data-key="appName" tooltip="Custom registry password/token" class="text-edgegap" />
+                            </ui:VisualElement>
+                            <ui:Button name="ContainerBuildAndPushBtn" text="Build and Push" class="button-edgegap text-edgegap" style="margin-left: 0;" />
                         </ui:VisualElement>
-                        <ui:VisualElement name="RegistryUrlRow" class="container-row" style="flex-grow: 1; align-items: center; flex-direction: row; justify-content: flex-start; align-self: auto;">
-                            <ui:TextField name="RegistryUrlTxt" label="Registry URL" view-data-key="appName" class="text-edgegap" />
-                        </ui:VisualElement>
-                        <ui:VisualElement name="RepositoryRow" class="container-row" style="flex-grow: 1; align-items: center; flex-direction: row; justify-content: flex-start; align-self: auto;">
-                            <ui:TextField name="ImageRepositoryTxt" label="Repository" view-data-key="appName" class="text-edgegap" />
-                        </ui:VisualElement>
-                        <ui:VisualElement name="UsernameRow" class="container-row" style="flex-grow: 1; align-items: center; flex-direction: row; justify-content: flex-start; align-self: auto;">
-                            <ui:TextField name="UsernameTxt" label="Username" view-data-key="appName" class="text-edgegap" />
-                        </ui:VisualElement>
-                        <ui:VisualElement name="TokenRow" class="container-row" style="flex-grow: 1; align-items: center; flex-direction: row; justify-content: flex-start; align-self: auto;">
-                            <ui:TextField name="TokenTxt" label="Token" view-data-key="appName" class="text-edgegap" />
-                        </ui:VisualElement>
-                        <ui:Button name="BuildAndPushBtn" text="Build and Push" class="button-edgegap text-edgegap" style="margin-left: 0;" />
                     </ui:Foldout>
                 </ui:VisualElement>
                 <ui:Foldout text="&lt;b&gt;Deployments&lt;/b&gt;" name="DeploymentsFoldout" class="text-edgegap container-row-parent">
                     <ui:VisualElement name="Row" class="container-row" style="flex-grow: 1; align-items: center; flex-direction: row; justify-content: flex-start; align-self: auto;" />
                     <ui:GroupBox name="DeploymentsHorizGroupBox" style="flex-direction: row; justify-content: flex-start; align-items: stretch; align-self: flex-start; margin-left: 0; padding-left: 0;">
-                        <ui:Button name="RefreshBtn" text="Refresh" class="button-edgegap text-edgegap" style="flex-grow: 0.5;" />
-                        <ui:Button name="CreateNewDeploymentBtn" text="Create New Deployment" class="button-edgegap text-edgegap" style="flex-grow: 0.5; max-width: 250px; min-width: 200px;" />
+                        <ui:Button name="DeploymentsRefreshBtn" text="Refresh" class="button-edgegap text-edgegap" style="flex-grow: 0.5;" />
+                        <ui:Button name="DeploymentCreateBtn" text="Create New Deployment" class="button-edgegap text-edgegap" style="flex-grow: 0.5; max-width: 250px; min-width: 200px;" />
                     </ui:GroupBox>
-                    <ui:GroupBox name="DeploymentHeadersGroupBox" class="container-row-parent" style="flex-direction: row; padding-top: 0; padding-right: 0; padding-bottom: 0; padding-left: 0; margin-bottom: 0;">
-                        <ui:Label name="connectionURLHeaderLabel" text="URL" style="flex-grow: 0.5; width: 41px; -unity-font-style: bold;" />
+                    <ui:GroupBox name="DeploymentHeadersGroupBox" class="container-row-parent" style="flex-direction: row; padding-top: 6px; padding-right: 0; padding-bottom: 3px; padding-left: 0; margin-bottom: 0; align-self: auto; justify-content: flex-start; align-items: center;">
+                        <ui:Label name="connectionURLHeaderLabel" text="URL" style="flex-grow: 0.5; width: 41px; -unity-font-style: bold; align-items: auto; justify-content: flex-start; align-self: auto;" />
                         <ui:Label name="connectionStatusHeaderLabel" text="Status" style="flex-grow: 0.5; align-items: stretch; -unity-text-align: upper-center; -unity-font-style: bold;" />
                         <ui:Label name="connectionControlHeaderLabel" text="Control" style="flex-grow: 0.5; -unity-text-align: upper-center; -unity-font-style: bold;" />
                     </ui:GroupBox>
-                    <ui:GroupBox name="DeploymentsGroupBox" style="flex-direction: row; padding-left: 0; align-items: center; align-self: stretch; justify-content: flex-start; height: 32px;">
-                        <ui:Label name="ConnectionURLLabel" text="{foo.edgegap.net:12345}" class="text--muted" style="flex-grow: 0.5; margin-left: 0; padding-left: 0; -unity-text-align: middle-left; align-items: center; width: auto;" />
-                        <ui:Label name="ConnectionStatusLabel" text="{Awaiting Connection}" class="text--muted" style="flex-grow: 0.6; flex-direction: column; -unity-text-align: middle-left; justify-content: flex-start; align-items: center;" />
+                    <ui:GroupBox name="DeploymentConnectionsGroupBox" style="flex-direction: row; padding-left: 0; align-items: center; align-self: stretch; justify-content: flex-start; height: 32px;">
+                        <ui:Label name="DeploymentConnectionUrlLabel" text="{foo.edgegap.net:12345}" class="text--muted" style="flex-grow: 0.5; margin-left: 0; padding-left: 0; -unity-text-align: middle-left; align-items: center; width: auto;" />
+                        <ui:Label name="DeploymentConnectionStatusLabel" text="{Awaiting Connection}" class="text--muted" style="flex-grow: 0.6; flex-direction: column; -unity-text-align: middle-left; justify-content: flex-start; align-items: center;" />
                         <ui:VisualElement name="ServerActionBtnHorizGroup" style="flex-grow: 1; flex-direction: row; align-items: center; justify-content: center;">
-                            <ui:Button name="ServerActionBtn" text="{Start}" class="button-edgegap text-edgegap" style="flex-grow: 0; align-items: stretch; -unity-text-align: middle-center; min-width: auto; width: 125px; max-width: none;" />
+                            <ui:Button name="DeploymentServerActionStopBtn" text="Stop" class="button-edgegap text-edgegap" style="flex-grow: 0; align-items: stretch; -unity-text-align: middle-center; min-width: auto; width: 125px; max-width: none;" />
                         </ui:VisualElement>
                     </ui:GroupBox>
                 </ui:Foldout>
                 <ui:VisualElement name="ServerDataContainer" />
                 <ui:GroupBox name="DeploymentHeadersHorizGroupBox" class="container-row-parent" style="flex-direction: row; justify-content: center; align-items: auto; align-self: center; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; border-top-left-radius: 1px; border-top-right-radius: 1px; border-bottom-right-radius: 1px; border-bottom-left-radius: 1px; border-right-color: rgb(0, 0, 0); border-left-color: rgb(0, 0, 0); padding-right: 135px; padding-left: 150px; padding-top: 15px; padding-bottom: 15px;">
-                    <ui:Button text="Documentation" tooltip="Opens the documentation website. The website version changes depending on the selected API environment." name="DocumentationBtn" class="button-edgegap text-edgegap" />
-                    <ui:Button text="Add More Game Servers!" tooltip="Opens the documentation website. The website version changes depending on the selected API environment." name="NeedMoreGameServersBtn" class="button-edgegap text-edgegap bg-purple" style="width: 220px; max-width: none; min-width: auto;" />
+                    <ui:Button text="Documentation" tooltip="Opens the documentation website. The website version changes depending on the selected API environment." name="FooterDocumentationBtn" class="button-edgegap text-edgegap" />
+                    <ui:Button text="Add More Game Servers!" tooltip="Opens the documentation website. The website version changes depending on the selected API environment." name="FooterNeedMoreGameServersBtn" class="button-edgegap text-edgegap bg-purple" style="width: 220px; max-width: none; min-width: auto;" />
                 </ui:GroupBox>
             </ui:VisualElement>
         </ui:ScrollView>

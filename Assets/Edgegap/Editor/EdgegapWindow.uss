@@ -156,6 +156,7 @@ Toggle > #unity-checkmark {
 }
 
 .checkmark-edgegap {
+    font-size: 12px;
 }
 
 .checkmark-edgegap #unity-checkmark {
