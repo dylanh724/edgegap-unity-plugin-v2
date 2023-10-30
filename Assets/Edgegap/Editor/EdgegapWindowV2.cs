@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
+using Edgegap.Editor.Api;
 using IO.Swagger.Model;
 using Newtonsoft.Json;
 using UnityEditor;
@@ -12,6 +13,7 @@ using UnityEditor.Build.Reporting;
 using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.Assertions;
+using UnityEngine.Serialization;
 using UnityEngine.UIElements;
 using Application = UnityEngine.Application;
 
@@ -24,65 +26,89 @@ namespace Edgegap.Editor
     public class EdgegapWindowV2 : EditorWindow
     {
         #region Vars
-        static readonly HttpClient _httpClient = new();
-        private const int ServerStatusCronjobIntervalMs = 10000; // Interval at which the server status is updated
-        private readonly System.Timers.Timer _updateServerStatusCronjob = new(ServerStatusCronjobIntervalMs);
-        private VisualTreeAsset _visualTree;
-        private bool _shouldUpdateServerStatus = false;
-        
-
         #region Vars -> Constants
-        private const string EDGEGAP_CONTACT_EN_URL = "https://edgegap.com/en/resources/contact"; // TODO: +French
+        /// <summary>Log Debug+, or Errors only?</summary>
+        public enum LogLevel
+        {
+            Debug,
+            Error,
+        }
+
+        /// <summary>TODO: Move opt to UI?</summary>
+        private const LogLevel logLevel = LogLevel.Debug;
+        
+        private bool IsLogLevelDebug => logLevel == LogLevel.Debug;
+        
+        private const int SERVER_STATUS_CRON_JOB_INTERVAL_MS = 10000; // Interval at which the server status is updated
+        private const string EDGEGAP_CONTACT_EN_URL = "https://edgegap.com/en/resources/contact";
         private const string EDITOR_DATA_SERIALIZATION_NAME = "EdgegapSerializationData";
 
-        const string API_TOKEN_TXT_ID = "ApiTokenTxt";
-        const string API_TOKEN_VERIFY_BTN_ID = "ApiTokenVerifyPurpleBtn"; // New in v2
-        const string API_TOKEN_GET_BTN_ID = "ApiTokenGetBtn"; // New in v2
+        const string DEBUG_BTN_ID = "DebugBtn";
+        
+        const string API_TOKEN_TXT_ID = "ApiTokenMaskedTxt";
+        const string API_TOKEN_VERIFY_BTN_ID = "ApiTokenVerifyPurpleBtn";
+        const string API_TOKEN_GET_BTN_ID = "ApiTokenGetBtn";
+        const string POST_AUTH_CONTAINER_ID = "PostAuthContainer";
             
+        const string APP_INFO_FOLDOUT_ID = "ApplicationInfoFoldout";
         const string APP_NAME_TXT_ID = "ApplicationNameTxt";
-        const string APP_ICON_SPRITE_ID = "ApplicationIconSprite";
-        const string APP_CREATE_ID = "ApplicationCreateBtn"; // New in v2
+        const string APP_ICON_SPRITE_OBJ_ID = "ApplicationIconSprite";
+        const string APP_CREATE_BTN_ID = "ApplicationCreateBtn";
             
+        const string CONTAINER_REGISTRY_FOLDOUT_ID = "ContainerRegistryFoldout";
+        const string CONTAINER_USE_CUSTOM_REGISTRY_TOGGLE_ID = "ContainerUseCustomRegistryToggle";
+        const string CONTAINER_CUSTOM_REGISTRY_WRAPPER_ID = "ContainerCustomRegistryWrapper";
         const string CONTAINER_REGISTRY_URL_TXT_ID = "ContainerRegistryUrlTxt";
         const string CONTAINER_IMAGE_REPOSITORY_URL_TXT_ID = "ContainerImageRepositoryTxt";
         const string CONTAINER_USERNAME_TXT_ID = "ContainerUsernameTxt";
         const string CONTAINER_TOKEN_TXT_ID = "ContainerTokenTxt";
         const string CONTAINER_BUILD_AND_PUSH_BTN_ID = "ContainerBuildAndPushBtn";
             
-        const string DEPLOYMENTS_REFRESH_BTN_ID = "DeploymentsRefreshBtn"; // New in v2
-        const string DEPLOYMENT_CREATE_BTN_ID = "DeploymentCreateBtn"; // New in v2
+        const string DEPLOYMENTS_FOLDOUT_ID = "DeploymentsFoldout";
+        const string DEPLOYMENTS_REFRESH_BTN_ID = "DeploymentsRefreshBtn";
+        const string DEPLOYMENT_CREATE_BTN_ID = "DeploymentCreateBtn";
         const string DEPLOYMENTS_CONTAINER_ID = "DeploymentConnectionsGroupBox"; // Dynamic
         const string DEPLOYMENT_CONNECTION_URL_LABEL_ID = "DeploymentConnectionUrlLabel"; // Dynamic
-        const string DEPLOYMENT_CONNECTION_STATUS_ID = "DeploymentConnectionStatusLabel"; // Dynamic
-        const string DEPLOYMENT_CONNECTION_SERVER_ACTION_BTN_ID = "DeploymentServerActionStopBtn";
+        const string DEPLOYMENT_CONNECTION_STATUS_LABEL_ID = "DeploymentConnectionStatusLabel"; // Dynamic
+        const string DEPLOYMENT_CONNECTION_SERVER_ACTION_STOP_BTN_ID = "DeploymentConnectionServerActionStopBtn";
             
         const string FOOTER_DOCUMENTATION_BTN_ID = "FooterDocumentationBtn";
         const string FOOTER_NEED_MORE_GAME_SERVERS_BTN_ID = "FooterNeedMoreGameServersBtn";
             
-        // (!) TODO: Hard-coded while unused in UI
+        [Obsolete("Hard-coded; not from UI. TODO: Get from UI")]
         const string APP_VERSION_NAME = "v1.0.0";
+
+        [Obsolete("Hard-coded; not from UI. TODO: Get from UI")]
+        private const ApiEnvironment API_ENVIRONMENT = ApiEnvironment.Console;
         #endregion // Vars -> / Constants
         
+        private static readonly HttpClient _httpClient = new();
+        private readonly System.Timers.Timer _updateServerStatusCronjob = new(SERVER_STATUS_CRON_JOB_INTERVAL_MS);
+        private VisualTreeAsset _visualTree;
+        private bool _shouldUpdateServerStatus = false;
         
         #region Vars -> Serialized fields for Editor value persistence
         // Editor persistence >> Not from UI
-        [SerializeField] private string _userExternalIp;
-        [SerializeField] private string _deploymentRequestId;
         [SerializeField] private bool _isApiTokenVerified; // Toggles the rest of the UI
+        [SerializeField] private string _deploymentRequestId;
+        [SerializeField] private string _userExternalIp;
+        [FormerlySerializedAs("_isRegistryReady")]
+        [SerializeField] private bool _isContainerRegistryReady;
         [SerializeField] private ApiEnvironment _apiEnvironment; // TODO: Swap out hard-coding with UI element?
         [SerializeField] private string _appVersionName; // TODO: Swap out hard-coding with UI element?
         // [SerializeField] private bool _autoIncrementTag = true; // TODO?
         // [SerializeField] private string _containerImageTag; // TODO?
         
         // Editor persistence >> From UI >> Header
-        [SerializeField] private string _apiTokenInputStr;
+        [FormerlySerializedAs("_apiTokenInputStr")]
+        [SerializeField] private string _apiTokenInputUnmaskedStr;
         
         // Editor persistence >>  From UI >> Application Info
         [SerializeField] private string _appNameInputStr;
-        [SerializeField] private Sprite _appIconSpriteObj; // New in V2
+        [SerializeField] private Sprite _appIconSpriteObj;
         
         // Editor persistence >> From UI >> Container Registry
-        [SerializeField] private bool _containerUseCustomRegistryToggleBool; // New in V2
+        [SerializeField] private bool _containerUseCustomRegistryToggleBool;
         [SerializeField] private string _containerRegistryUrlInputStr;
         [SerializeField] private string _containerImageRepositoryInputStr;
         [SerializeField] private string _containerUsernameInputStr;
@@ -91,27 +117,35 @@ namespace Edgegap.Editor
         
         
         #region Vars -> Interactable Elements
-        private TextField _apiTokenInput;
-        private Button _apiTokenVerifyBtn; // New in v2
-        private Button _apiTokenGetBtn; // New in v2
-
-        private TextField _appNameInput;
-        private ObjectField _appIconSpriteObjInput; // New in v2 - selects a Sprite object directly
-        private Button _appCreateBtn; // New in v2
+        private Button _debugBtn;
         
-        private Toggle _containerUseCustomRegistryToggle; // New in v2
+        /// <summary>(!) This will only contain `*` chars: For the real token, see `_apiTokenInputUnmaskedStr`.</summary>
+        private TextField _apiTokenMaskedInput;
+        private Button _apiTokenVerifyBtn;
+        private Button _apiTokenGetBtn;
+        private VisualElement _postAuthContainer;
+
+        private Foldout _appInfoFoldout;
+        private TextField _appNameInput;
+        private ObjectField _appIconSpriteObjInput; // selects a Sprite object directly
+        private Button _appCreateBtn;
+        
+        private Foldout _containerRegistryFoldout;
+        private Toggle _containerUseCustomRegistryToggle;
+        private VisualElement _containerCustomRegistryWrapper;
         private TextField _containerRegistryUrlInput;
         private TextField _containerImageRepositoryInput;
-        private TextField _containerUsernameInput; // New in v2
-        private TextField _containerTokenInput; // New in v2
+        private TextField _containerUsernameInput;
+        private TextField _containerTokenInput;
         private Button _containerBuildAndPushServerBtn;
         
+        private Foldout _deploymentsFoldout;
         private Button _deploymentsRefreshBtn;
         private Button _deploymentCreateBtn;
         private VisualElement _deploymentServerDataContainer; // readonly
         private Label _deploymentConnectionStatusLabel; // readonly
         private VisualElement _deploymentConnectionUrlLabel; // Readonly
-        private Button _deploymentServerActionStopBtn;
+        private Button _deploymentConnectionServerActionStopBtn;
 
         private Button _footerDocumentationBtn;
         private Button _footerNeedMoreGameServersBtn;
@@ -157,7 +191,7 @@ namespace Edgegap.Editor
                 return;
             
             _shouldUpdateServerStatus = false;
-            UpdateServerStatus();
+            updateServerStatus();
         }
 
         public void CreateGUI()
@@ -214,7 +248,7 @@ namespace Edgegap.Editor
             setVisualElementsToFields();
             assertVisualElementKeys();
             registerClickCallbacks();
-            registerFieldChangedCallbacks();
+            registerFieldCallbacks();
             loadRegisterInitServerDataUiElements();
         }
 
@@ -223,54 +257,70 @@ namespace Edgegap.Editor
         /// </summary>
         private void assertVisualElementKeys()
         {
-            Assert.IsNotNull(_apiTokenInput, $"Expected {nameof(_apiTokenInput)} via #{API_TOKEN_TXT_ID}");
-            Assert.IsNotNull(_apiTokenVerifyBtn, $"Expected {nameof(_apiTokenVerifyBtn)} via #{API_TOKEN_VERIFY_BTN_ID}");
-            Assert.IsNotNull(_apiTokenGetBtn, $"Expected {nameof(_apiTokenGetBtn)} via #{API_TOKEN_GET_BTN_ID}");
-            
-            Assert.IsNotNull(_appNameInput, $"Expected {nameof(_appNameInput)} via #{APP_NAME_TXT_ID}");
-            Assert.IsNotNull(_appIconSpriteObjInput, $"Expected {nameof(_appIconSpriteObjInput)} via #{APP_ICON_SPRITE_ID}");
-            Assert.IsNotNull(_appCreateBtn, $"Expected {nameof(_appCreateBtn)} via #{APP_CREATE_ID}");
+            try
+            {
+                Assert.IsNotNull(_apiTokenMaskedInput, $"Expected {nameof(_apiTokenMaskedInput)} via #{API_TOKEN_TXT_ID}");
+                Assert.IsNotNull(_apiTokenVerifyBtn, $"Expected {nameof(_apiTokenVerifyBtn)} via #{API_TOKEN_VERIFY_BTN_ID}");
+                Assert.IsNotNull(_apiTokenGetBtn, $"Expected {nameof(_apiTokenGetBtn)} via #{API_TOKEN_GET_BTN_ID}");
+                Assert.IsNotNull(_postAuthContainer, $"Expected {nameof(_postAuthContainer)} via #{POST_AUTH_CONTAINER_ID}");
+                
+                Assert.IsNotNull(_appInfoFoldout, $"Expected {nameof(_appInfoFoldout)} via #{APP_INFO_FOLDOUT_ID}");
+                Assert.IsNotNull(_appNameInput, $"Expected {nameof(_appNameInput)} via #{APP_NAME_TXT_ID}");
+                Assert.IsNotNull(_appIconSpriteObjInput, $"Expected {nameof(_appIconSpriteObjInput)} via #{APP_ICON_SPRITE_OBJ_ID}");
+                Assert.IsNotNull(_appCreateBtn, $"Expected {nameof(_appCreateBtn)} via #{APP_CREATE_BTN_ID}");
 
-            Assert.IsNotNull(_containerRegistryUrlInput, $"Expected {nameof(_containerRegistryUrlInput)} via #{CONTAINER_REGISTRY_URL_TXT_ID}");
-            Assert.IsNotNull(_containerImageRepositoryInput, $"Expected {nameof(_containerImageRepositoryInput)} via #{CONTAINER_IMAGE_REPOSITORY_URL_TXT_ID}");
-            Assert.IsNotNull(_containerUsernameInput, $"Expected {nameof(_containerUsernameInput)} via #{CONTAINER_USERNAME_TXT_ID}");
-            Assert.IsNotNull(_containerTokenInput, $"Expected {nameof(_containerTokenInput)} via #{CONTAINER_TOKEN_TXT_ID}");
-            Assert.IsNotNull(_containerBuildAndPushServerBtn, $"Expected {nameof(_containerBuildAndPushServerBtn)} via #{CONTAINER_BUILD_AND_PUSH_BTN_ID}");
+                Assert.IsNotNull(_containerRegistryFoldout, $"Expected {nameof(_containerRegistryFoldout)} via #{CONTAINER_REGISTRY_FOLDOUT_ID}");
+                Assert.IsNotNull(_containerUseCustomRegistryToggle, $"Expected {nameof(_containerUseCustomRegistryToggle)} via #{CONTAINER_USE_CUSTOM_REGISTRY_TOGGLE_ID}");
+                Assert.IsNotNull(_containerCustomRegistryWrapper, $"Expected {nameof(_containerCustomRegistryWrapper)} via #{CONTAINER_CUSTOM_REGISTRY_WRAPPER_ID}");
+                Assert.IsNotNull(_containerRegistryUrlInput, $"Expected {nameof(_containerRegistryUrlInput)} via #{CONTAINER_REGISTRY_URL_TXT_ID}");
+                Assert.IsNotNull(_containerImageRepositoryInput, $"Expected {nameof(_containerImageRepositoryInput)} via #{CONTAINER_IMAGE_REPOSITORY_URL_TXT_ID}");
+                Assert.IsNotNull(_containerUsernameInput, $"Expected {nameof(_containerUsernameInput)} via #{CONTAINER_USERNAME_TXT_ID}");
+                Assert.IsNotNull(_containerTokenInput, $"Expected {nameof(_containerTokenInput)} via #{CONTAINER_TOKEN_TXT_ID}");
+                Assert.IsNotNull(_containerBuildAndPushServerBtn, $"Expected {nameof(_containerBuildAndPushServerBtn)} via #{CONTAINER_BUILD_AND_PUSH_BTN_ID}");
 
-            Assert.IsNotNull(_deploymentsRefreshBtn, $"Expected {nameof(_deploymentsRefreshBtn)} via #{DEPLOYMENTS_REFRESH_BTN_ID}");
-            Assert.IsNotNull(_deploymentCreateBtn, $"Expected {nameof(_deploymentCreateBtn)} via #{DEPLOYMENT_CREATE_BTN_ID}");
-            Assert.IsNotNull(_deploymentServerDataContainer, $"Expected {nameof(_deploymentServerDataContainer)} via #{DEPLOYMENTS_CONTAINER_ID}");
-            Assert.IsNotNull(_deploymentConnectionUrlLabel, $"Expected {nameof(_deploymentConnectionUrlLabel)} via #{DEPLOYMENT_CONNECTION_URL_LABEL_ID}");
-            Assert.IsNotNull(_deploymentConnectionStatusLabel, $"Expected {nameof(_deploymentConnectionStatusLabel)} via #{DEPLOYMENT_CONNECTION_STATUS_ID}");
-            Assert.IsNotNull(_deploymentServerActionStopBtn, $"Expected {nameof(_deploymentServerActionStopBtn)} via #{DEPLOYMENT_CONNECTION_SERVER_ACTION_BTN_ID}");
-            
-            Assert.IsNotNull(_footerDocumentationBtn, $"Expected {nameof(_footerDocumentationBtn)} via #{FOOTER_DOCUMENTATION_BTN_ID}");
-            Assert.IsNotNull(_footerNeedMoreGameServersBtn, $"Expected {nameof(_footerNeedMoreGameServersBtn)} via #{FOOTER_NEED_MORE_GAME_SERVERS_BTN_ID}");
-            
-            // // TODO: Explicitly set, for now in v2 - but remember to assert later if we stop hard-coding these >>
-            // _apiEnvironment
-            // _appVersionName
+                Assert.IsNotNull(_deploymentsFoldout, $"Expected {nameof(_deploymentsFoldout)} via #{DEPLOYMENTS_FOLDOUT_ID}");
+                Assert.IsNotNull(_deploymentsRefreshBtn, $"Expected {nameof(_deploymentsRefreshBtn)} via #{DEPLOYMENTS_REFRESH_BTN_ID}");
+                Assert.IsNotNull(_deploymentCreateBtn, $"Expected {nameof(_deploymentCreateBtn)} via #{DEPLOYMENT_CREATE_BTN_ID}");
+                Assert.IsNotNull(_deploymentServerDataContainer, $"Expected {nameof(_deploymentServerDataContainer)} via #{DEPLOYMENTS_CONTAINER_ID}");
+                Assert.IsNotNull(_deploymentConnectionUrlLabel, $"Expected {nameof(_deploymentConnectionUrlLabel)} via #{DEPLOYMENT_CONNECTION_URL_LABEL_ID}");
+                Assert.IsNotNull(_deploymentConnectionStatusLabel, $"Expected {nameof(_deploymentConnectionStatusLabel)} via #{DEPLOYMENT_CONNECTION_STATUS_LABEL_ID}");
+                Assert.IsNotNull(_deploymentConnectionServerActionStopBtn, $"Expected {nameof(_deploymentConnectionServerActionStopBtn)} via #{DEPLOYMENT_CONNECTION_SERVER_ACTION_STOP_BTN_ID}");
+                
+                Assert.IsNotNull(_footerDocumentationBtn, $"Expected {nameof(_footerDocumentationBtn)} via #{FOOTER_DOCUMENTATION_BTN_ID}");
+                Assert.IsNotNull(_footerNeedMoreGameServersBtn, $"Expected {nameof(_footerNeedMoreGameServersBtn)} via #{FOOTER_NEED_MORE_GAME_SERVERS_BTN_ID}");
+                
+                // // TODO: Explicitly set, for now in v2 - but remember to assert later if we stop hard-coding these >>
+                // _apiEnvironment
+                // _appVersionName
+            }
+            catch (Exception e)
+            {
+                Debug.LogError(e.Message);
+                _postAuthContainer.SetEnabled(false);
+            }
         }
 
         private void loadRegisterInitServerDataUiElements()
         {
             VisualElement serverDataElement = EdgegapServerDataManager.GetServerDataVisualTree();
             EdgegapServerDataManager.RegisterServerDataContainer(serverDataElement);
+            
             _deploymentServerDataContainer.Clear();
             _deploymentServerDataContainer.Add(serverDataElement);
             
-            // // [Unused in v2 UI]
-            // // Init the ApiEnvironment dropdown
-            // _apiEnvironmentSelect.Init(ApiEnvironment.Console);
+            _postAuthContainer.SetEnabled(_isApiTokenVerified);
         }
 
         /// <summary>
         /// Register non-btn change actionss. We'll want to save for persistence, validate, etc
         /// </summary>
-        private void registerFieldChangedCallbacks()
+        private void registerFieldCallbacks()
         {
-            _apiTokenInput.RegisterValueChangedCallback<string>(ApiTokenInputChanged);
-            _appIconSpriteObjInput.RegisterValueChangedCallback<UnityEngine.Object>(AppIconSpriteObjInput);
+            _apiTokenMaskedInput.RegisterValueChangedCallback(ApiTokenInputChanged);
+            _apiTokenMaskedInput.RegisterCallback<FocusOutEvent>(ApiTokenInputFocusOut);
+            
+            _appIconSpriteObjInput.RegisterValueChangedCallback(AppIconSpriteObjInput);
+            _containerUseCustomRegistryToggle.RegisterValueChangedCallback(ContainerUseCustomRegistryToggle);
         }
 
         /// <summary>
@@ -278,45 +328,59 @@ namespace Edgegap.Editor
         /// </summary>
         private void registerClickCallbacks()
         {
-            _apiTokenVerifyBtn.clickable.clicked += OnApiTokenVerifyBtnClick; // New in v2
-            _apiTokenGetBtn.clickable.clicked += OnApiTokenGetBtnClick; // New in v2
-            _appCreateBtn.clickable.clicked += OnAppCreateBtnClick; // New in v2
-            _containerBuildAndPushServerBtn.clickable.clicked += OnContainerBuildAndPushServerBtnClick;
-            _deploymentsRefreshBtn.clickable.clicked += OnDeploymentsRefreshBtnClick; // New in v2
-            _deploymentCreateBtn.clickable.clicked += OnDeploymentCreateBtnClick; // New in v2
-            _deploymentServerActionStopBtn.clickable.clicked += OnDeploymentServerActionStopBtnClick; // New in v2
-            _footerDocumentationBtn.clickable.clicked += OnFooterDocumentationBtnClick;
-            _footerNeedMoreGameServersBtn.clickable.clicked += OnFooterNeedMoreGameServersBtnClick; // New in v2
+            _debugBtn.clickable.clicked += onDebugBtnClick;
+            
+            _apiTokenVerifyBtn.clickable.clicked += onApiTokenVerifyBtnClick;
+            _apiTokenGetBtn.clickable.clicked += onApiTokenGetBtnClick;
+            
+            _appCreateBtn.clickable.clicked += onAppCreateBtnClick;
+            
+            _containerBuildAndPushServerBtn.clickable.clicked += onContainerBuildAndPushServerBtnClick;
+            
+            _deploymentsRefreshBtn.clickable.clicked += onDeploymentsRefreshBtnClick;
+            _deploymentCreateBtn.clickable.clicked += onDeploymentCreateBtnClick;
+            _deploymentConnectionServerActionStopBtn.clickable.clicked += onDeploymentServerActionStopBtnClick;
+            
+            _footerDocumentationBtn.clickable.clicked += onFooterDocumentationBtnClick;
+            _footerNeedMoreGameServersBtn.clickable.clicked += onFooterNeedMoreGameServersBtnClick;
         }
 
         /// <summary>Set fields referencing UI Builder's fields</summary>
         private void setVisualElementsToFields()
         {
-            _apiTokenInput = rootVisualElement.Q<TextField>(API_TOKEN_TXT_ID);
-            _apiTokenVerifyBtn = rootVisualElement.Q<Button>(API_TOKEN_VERIFY_BTN_ID); // New in v2
-            _apiTokenGetBtn = rootVisualElement.Q<Button>(API_TOKEN_GET_BTN_ID); // New in v2
+            _debugBtn = rootVisualElement.Q<Button>(DEBUG_BTN_ID);
             
+            _apiTokenMaskedInput = rootVisualElement.Q<TextField>(API_TOKEN_TXT_ID);
+            _apiTokenVerifyBtn = rootVisualElement.Q<Button>(API_TOKEN_VERIFY_BTN_ID);
+            _apiTokenGetBtn = rootVisualElement.Q<Button>(API_TOKEN_GET_BTN_ID);
+            _postAuthContainer = rootVisualElement.Q<VisualElement>(POST_AUTH_CONTAINER_ID);
+            
+            _appInfoFoldout = rootVisualElement.Q<Foldout>(APP_INFO_FOLDOUT_ID);
             _appNameInput = rootVisualElement.Q<TextField>(APP_NAME_TXT_ID);
-            _appIconSpriteObjInput = rootVisualElement.Q<ObjectField>(APP_ICON_SPRITE_ID); // New in v2
-            _appCreateBtn = rootVisualElement.Q<Button>(APP_CREATE_ID); // New in v2
-
+            _appIconSpriteObjInput = rootVisualElement.Q<ObjectField>(APP_ICON_SPRITE_OBJ_ID);
+            _appCreateBtn = rootVisualElement.Q<Button>(APP_CREATE_BTN_ID);
+            
+            _containerRegistryFoldout = rootVisualElement.Q<Foldout>(CONTAINER_REGISTRY_FOLDOUT_ID);
+            _containerUseCustomRegistryToggle = rootVisualElement.Q<Toggle>(CONTAINER_USE_CUSTOM_REGISTRY_TOGGLE_ID);
+            _containerCustomRegistryWrapper = rootVisualElement.Q<VisualElement>(CONTAINER_CUSTOM_REGISTRY_WRAPPER_ID);
             _containerRegistryUrlInput = rootVisualElement.Q<TextField>(CONTAINER_REGISTRY_URL_TXT_ID);
             _containerImageRepositoryInput = rootVisualElement.Q<TextField>(CONTAINER_IMAGE_REPOSITORY_URL_TXT_ID);
-            _containerUsernameInput = rootVisualElement.Q<TextField>(CONTAINER_USERNAME_TXT_ID); // New in v2
-            _containerTokenInput = rootVisualElement.Q<TextField>(CONTAINER_TOKEN_TXT_ID); // New in v2
+            _containerUsernameInput = rootVisualElement.Q<TextField>(CONTAINER_USERNAME_TXT_ID);
+            _containerTokenInput = rootVisualElement.Q<TextField>(CONTAINER_TOKEN_TXT_ID);
             _containerBuildAndPushServerBtn = rootVisualElement.Q<Button>(CONTAINER_BUILD_AND_PUSH_BTN_ID);
 
-            _deploymentsRefreshBtn = rootVisualElement.Q<Button>(DEPLOYMENTS_REFRESH_BTN_ID); // New in v2
-            _deploymentCreateBtn = rootVisualElement.Q<Button>(DEPLOYMENT_CREATE_BTN_ID); // New in v2
+            _deploymentsFoldout = rootVisualElement.Q<Foldout>(DEPLOYMENTS_FOLDOUT_ID);
+            _deploymentsRefreshBtn = rootVisualElement.Q<Button>(DEPLOYMENTS_REFRESH_BTN_ID);
+            _deploymentCreateBtn = rootVisualElement.Q<Button>(DEPLOYMENT_CREATE_BTN_ID);
             _deploymentServerDataContainer = rootVisualElement.Q<VisualElement>(DEPLOYMENTS_CONTAINER_ID); // Dynamic
-            _deploymentConnectionUrlLabel = rootVisualElement.Q<Label>(DEPLOYMENT_CONNECTION_URL_LABEL_ID); // New in v2
-            _deploymentConnectionStatusLabel = rootVisualElement.Q<Label>(DEPLOYMENT_CONNECTION_STATUS_ID);
-            _deploymentServerActionStopBtn = rootVisualElement.Q<Button>(DEPLOYMENT_CONNECTION_SERVER_ACTION_BTN_ID);
+            _deploymentConnectionUrlLabel = rootVisualElement.Q<Label>(DEPLOYMENT_CONNECTION_URL_LABEL_ID);
+            _deploymentConnectionStatusLabel = rootVisualElement.Q<Label>(DEPLOYMENT_CONNECTION_STATUS_LABEL_ID);
+            _deploymentConnectionServerActionStopBtn = rootVisualElement.Q<Button>(DEPLOYMENT_CONNECTION_SERVER_ACTION_STOP_BTN_ID);
             
             _footerDocumentationBtn = rootVisualElement.Q<Button>(FOOTER_DOCUMENTATION_BTN_ID);
-            _footerNeedMoreGameServersBtn = rootVisualElement.Q<Button>(FOOTER_NEED_MORE_GAME_SERVERS_BTN_ID); // New in v2
+            _footerNeedMoreGameServersBtn = rootVisualElement.Q<Button>(FOOTER_NEED_MORE_GAME_SERVERS_BTN_ID);
             
-            _apiEnvironment = ApiEnvironment.Staging; // (!) TODO: Hard-coded while unused in UI
+            _apiEnvironment = API_ENVIRONMENT; // (!) TODO: Hard-coded while unused in UI
             _appVersionName = APP_VERSION_NAME; // (!) TODO: Hard-coded while unused in UI
             
             #region Unused in v2 UI
@@ -338,15 +402,29 @@ namespace Edgegap.Editor
         
         
         #region Init -> Button clicks
-        private void OnApiTokenVerifyBtnClick() => VerifyApiToken();
-        private void OnApiTokenGetBtnClick() => GetApiToken();
-        private void OnAppCreateBtnClick() => CreateApp();
-        private void OnContainerBuildAndPushServerBtnClick() => BuildAndPushServer();
-        private void OnDeploymentsRefreshBtnClick() => UpdateServerStatus();
-        private void OnDeploymentCreateBtnClick() => StartServerCallback();
-        private void OnDeploymentServerActionStopBtnClick() => StopServerCallback();
-        private void OnFooterDocumentationBtnClick() => OpenDocumentationCallback();
-        private void OnFooterNeedMoreGameServersBtnClick() => OpenNeedMoreGameServersWebsite();
+        // ##########################################################
+        // TODO UX: Disable btn on click
+        // TODO UX: Show loading spinner on click
+        // TODO UX: Restore btn on done (and hide loading spinner)
+        // TODO UX: On success, reflect UI 
+        // TODO UX: On error, reflect UI
+        // ##########################################################
+
+        private void onDebugBtnClick()
+        {
+            if (IsLogLevelDebug) Debug.Log("onDebugBtnClick");
+            _postAuthContainer.SetEnabled(!_postAuthContainer.enabledInHierarchy);
+        }
+        
+        private void onApiTokenVerifyBtnClick() => verifyApiToken();
+        private void onApiTokenGetBtnClick() => getApiToken();
+        private void onAppCreateBtnClick() => createApp();
+        private void onContainerBuildAndPushServerBtnClick() => buildAndPushServer();
+        private void onDeploymentsRefreshBtnClick() => updateServerStatus();
+        private void onDeploymentCreateBtnClick() => startServerCallback();
+        private void onDeploymentServerActionStopBtnClick() => stopServerCallback();
+        private void onFooterDocumentationBtnClick() => openDocumentationCallback();
+        private void onFooterNeedMoreGameServersBtnClick() => openNeedMoreGameServersWebsite();
         #endregion // Init -> /Button Clicks
         #endregion // Init
 
@@ -354,22 +432,23 @@ namespace Edgegap.Editor
         /// <summary>Prevents memory leaks, mysterious errors and "ghost" values set from a previous session.</summary>
         private void unregisterClickEvents()
         {
-            _apiTokenVerifyBtn.clickable.clicked -= OnApiTokenVerifyBtnClick; // New in v2
-            _apiTokenGetBtn.clickable.clicked -= OnApiTokenGetBtnClick; // New in v2
-            _appCreateBtn.clickable.clicked -= OnAppCreateBtnClick; // New in v2
-            _containerBuildAndPushServerBtn.clickable.clicked -= OnContainerBuildAndPushServerBtnClick;
-            _deploymentsRefreshBtn.clickable.clicked -= OnDeploymentsRefreshBtnClick; // New in v2
-            _deploymentCreateBtn.clickable.clicked -= OnDeploymentCreateBtnClick; // New in v2
-            _deploymentServerActionStopBtn.clickable.clicked -= OnDeploymentServerActionStopBtnClick; // New in v2
-            _footerDocumentationBtn.clickable.clicked -= OnFooterDocumentationBtnClick;
-            _footerNeedMoreGameServersBtn.clickable.clicked -= OnFooterNeedMoreGameServersBtnClick; // New in v2
+            _debugBtn.clickable.clicked -= onDebugBtnClick;
+            _apiTokenVerifyBtn.clickable.clicked -= onApiTokenVerifyBtnClick;
+            _apiTokenGetBtn.clickable.clicked -= onApiTokenGetBtnClick;
+            _appCreateBtn.clickable.clicked -= onAppCreateBtnClick;
+            _containerBuildAndPushServerBtn.clickable.clicked -= onContainerBuildAndPushServerBtnClick;
+            _deploymentsRefreshBtn.clickable.clicked -= onDeploymentsRefreshBtnClick;
+            _deploymentCreateBtn.clickable.clicked -= onDeploymentCreateBtnClick;
+            _deploymentConnectionServerActionStopBtn.clickable.clicked -= onDeploymentServerActionStopBtnClick;
+            _footerDocumentationBtn.clickable.clicked -= onFooterDocumentationBtnClick;
+            _footerNeedMoreGameServersBtn.clickable.clicked -= onFooterNeedMoreGameServersBtnClick;
         }
         
         private void ConnectCallback()
         {
             string selectedAppName = _appNameInput.value;
             string selectedVersionName = _appVersionName; // TODO: Hard-coded while unused in UI
-            string selectedApiKey = _apiTokenInput.value;
+            string selectedApiKey = _apiTokenInputUnmaskedStr;
 
             bool validAppName = !string.IsNullOrEmpty(selectedAppName) && !string.IsNullOrWhiteSpace(selectedAppName);
             bool validVersionName = !string.IsNullOrEmpty(selectedVersionName) && !string.IsNullOrWhiteSpace(selectedVersionName);
@@ -394,16 +473,15 @@ namespace Edgegap.Editor
         
         private void SyncObjectWithForm()
         {
-            _apiTokenInputStr = _apiTokenInput.value;
-            
+            // Looking for _apiTokenInputUnmaskedStr? This is already handed @ ApiTokenInputChanged()
             _appNameInputStr = _appNameInput.value;
-            _appIconSpriteObj = _appIconSpriteObjInput.value as Sprite; // New in v2
+            _appIconSpriteObj = _appIconSpriteObjInput.value as Sprite;
                 
-            _containerUseCustomRegistryToggleBool = _containerUseCustomRegistryToggle.value; // New in v2
+            _containerUseCustomRegistryToggleBool = _containerUseCustomRegistryToggle.value;
             _containerRegistryUrlInputStr = _containerRegistryUrlInput.value;
             _containerImageRepositoryInputStr = _containerImageRepositoryInput.value;
-            _containerUsernameInputStr = _containerUsernameInput.value; // New in v2
-            _containerTokenInputStr = _containerTokenInput.value; // New in v2
+            _containerUsernameInputStr = _containerUsernameInput.value;
+            _containerTokenInputStr = _containerTokenInput.value;
 
             // _appVersionName = _appVersionNameInput.value; // TODO: Hard-coded while unused in v2 UI
             // _apiEnvironment = (ApiEnvironment)_apiEnvironmentSelect.value; // TODO: Hard-coded while unused in v2 UI
@@ -414,16 +492,21 @@ namespace Edgegap.Editor
 
         private void SyncFormWithObject()
         {
-            _apiTokenInput.value = _apiTokenInputStr;
+            // Fill the masked input with '*' chars instead of the actual val
+            _apiTokenMaskedInput.value = _apiTokenInputUnmaskedStr; // This will auto-mask with `*` on change
+            
+            // Only show the rest of the form if apiToken is verified
+            _postAuthContainer.SetEnabled(_isApiTokenVerified);
             
             _appNameInput.value = _appNameInputStr;
-            _appIconSpriteObjInput.value = _appIconSpriteObj; // New in v2
+            _appIconSpriteObjInput.value = _appIconSpriteObj;
             
-            _containerUseCustomRegistryToggle.value = _containerUseCustomRegistryToggleBool; // New in v2
+            _containerCustomRegistryWrapper.SetEnabled(_containerUseCustomRegistryToggleBool);
+            _containerUseCustomRegistryToggle.value = _containerUseCustomRegistryToggleBool;
             _containerRegistryUrlInput.value = _containerRegistryUrlInputStr;
             _containerImageRepositoryInput.value = _containerImageRepositoryInputStr;
-            _containerUsernameInput.value = _containerUsernameInputStr; // New in v2
-            _containerTokenInput.value = _containerTokenInputStr; // New in v2
+            _containerUsernameInput.value = _containerUsernameInputStr;
+            _containerTokenInput.value = _containerTokenInputStr;
 
             // _appVersionNameInput.value = _appVersionName; // TODO: Hard-coded while unused in v2 UI
             // _apiEnvironmentSelect.value = _apiEnvironment; // TODO: Hard-coded while unused in v2 UI
@@ -492,43 +575,106 @@ namespace Edgegap.Editor
         
 
         #region Immediate non-button changes
+        /// <summary>
+        /// - There's no built-in way to add a password (*) char mask in UI Builder,
+        /// so we do it manually on change, storing the actual value elsewhere
+        /// </summary>
+        /// <param name="evt"></param>
         private void ApiTokenInputChanged(ChangeEvent<string> evt)
         {
-            // TODO: Validate input?
+            // Cache the real token val
+            if (!evt.newValue.StartsWith('*'))
+                _apiTokenInputUnmaskedStr = evt.newValue;
+
+            // Reset form to !verified state
+            _isApiTokenVerified = false;
+            _postAuthContainer.SetEnabled(false);
         }
+        
+        /// <summary>Replace the input with masked `*` chars on focus out</summary>
+        /// <param name="evt"></param>
+        private void ApiTokenInputFocusOut(FocusOutEvent evt) =>
+            _apiTokenMaskedInput.value = "".PadLeft(_apiTokenInputUnmaskedStr.Length, '*');
+        
+        private void ContainerUseCustomRegistryToggle(ChangeEvent<bool> evt) =>
+            _containerCustomRegistryWrapper.SetEnabled(evt.newValue);
         
         private void AppIconSpriteObjInput(ChangeEvent<UnityEngine.Object> evt)
         {
             // TODO: Show preview?
         }
         #endregion // Immediate non-button changes
+        
+        private async Task verifyApiToken()
+        {
+            if (IsLogLevelDebug) Debug.Log("verifyApiToken");
+                
+            EdgegapWizardApi wizardApi = new EdgegapWizardApi(
+                API_ENVIRONMENT, 
+                _apiTokenInputUnmaskedStr.Trim(),
+                logLevel);
+            
+            HttpStatusCode resultStatusCode = await wizardApi.InitQuickStart();
+            
+            _isApiTokenVerified = resultStatusCode == HttpStatusCode.NoContent; // 204
+            SyncContainerEnablesToState();
 
-        private void VerifyApiToken()
+            if (!_isApiTokenVerified)
+                return;
+            
+            // Verified: TODO: Get app info so
+            
+            
+            // Toggle the remainder of the form
+            // SyncContainerEnablesToState();
+        }
+
+        /// <summary>
+        /// Toggle container groups and foldouts on/off based on:
+        /// - _isApiTokenVerified
+        /// </summary>
+        private void SyncContainerEnablesToState()
         {
-            throw new NotImplementedException("TODO: VerifyApiToken");
-            // _isApiTokenVerified = TODO;
+            // Requires _isApiTokenVerified
+            _postAuthContainer.SetEnabled(_isApiTokenVerified); // Entire body container
+            _appInfoFoldout.SetEnabled(_isApiTokenVerified);
+            _appInfoFoldout.value = _isApiTokenVerified;
+  
+            // + Requires _isContainerRegistryReady
+            bool isApiTokenVerifiedAndContainerReady = _isApiTokenVerified && _isContainerRegistryReady;
+            
+            _containerRegistryFoldout.SetEnabled(isApiTokenVerifiedAndContainerReady);
+            _containerRegistryFoldout.value = isApiTokenVerifiedAndContainerReady;
+            
+            _deploymentsFoldout.SetEnabled(isApiTokenVerifiedAndContainerReady);
+            _deploymentsFoldout.value = isApiTokenVerifiedAndContainerReady;
+
+            // + Requires _containerUseCustomRegistryToggleBool
+            _containerCustomRegistryWrapper.SetEnabled(isApiTokenVerifiedAndContainerReady && 
+                _containerUseCustomRegistryToggleBool);
+        }
+
+        private void getApiToken()
+        {
+            if (IsLogLevelDebug) Debug.Log("getApiToken");
+            throw new NotImplementedException("TODO: getApiToken");
         }
         
-        private void GetApiToken()
+        private void createApp()
         {
-            throw new NotImplementedException("TODO: GetApiToken");
-        }
-        
-        private void CreateApp()
-        {
-            throw new NotImplementedException("TODO: CreateApp");
+            if (IsLogLevelDebug) Debug.Log("createApp");
+            throw new NotImplementedException("TODO: createApp");
         }
 
         /// <summary>Open contact form in desired locale</summary>
-        private void OpenNeedMoreGameServersWebsite()
+        private void openNeedMoreGameServersWebsite()
         {
             // TODO: Swap site to French, if French locale >> Currently, there is no French-specific Contact form
             // bool isFrenchLocale = Application.systemLanguage == SystemLanguage.French;
-            
             Application.OpenURL(EDGEGAP_CONTACT_EN_URL);
         }
 
-        private void OpenDocumentationCallback()
+        private void openDocumentationCallback()
         {
             string documentationUrl = _apiEnvironment.GetDocumentationUrl();
 
@@ -578,7 +724,7 @@ namespace Edgegap.Editor
                 status, 
                 ProgressCounter++ / 50);
 
-        private async void BuildAndPushServer()
+        private async void buildAndPushServer()
         {
             SetToolUIState(ToolState.Building);
 
@@ -649,7 +795,7 @@ namespace Edgegap.Editor
             }
         }
 
-        private async void StartServerCallback()
+        private async void startServerCallback()
         {
             SetToolUIState(ToolState.ProcessingDeployment); // Prevents being called multiple times.
 
@@ -675,7 +821,7 @@ namespace Edgegap.Editor
 
                 _deploymentRequestId = parsedResponse.RequestId;
 
-                UpdateServerStatus();
+                updateServerStatus();
                 StartServerStatusCronjob();
             }
             else
@@ -686,7 +832,7 @@ namespace Edgegap.Editor
             }
         }
 
-        private async void StopServerCallback()
+        private async void stopServerCallback()
         {
             string path = $"/v1/stop/{_deploymentRequestId}";
 
@@ -695,7 +841,7 @@ namespace Edgegap.Editor
 
             if (response.IsSuccessStatusCode)
             {
-                UpdateServerStatus();
+                updateServerStatus();
                 SetToolUIState(ToolState.ProcessingDeployment);
             }
             else
@@ -719,7 +865,7 @@ namespace Edgegap.Editor
 
         private void StopServerStatusCronjob() => _updateServerStatusCronjob.Stop();
 
-        private async void UpdateServerStatus()
+        private async void updateServerStatus()
         {
             Status serverStatusResponse = await FetchServerStatus();
 
@@ -812,7 +958,7 @@ namespace Edgegap.Editor
         {
             bool canEditConnectionInfo = toolState.CanEditConnectionInfo();
 
-            _apiTokenInput.SetEnabled(canEditConnectionInfo);
+            _apiTokenMaskedInput.SetEnabled(canEditConnectionInfo);
             _appNameInput.SetEnabled(canEditConnectionInfo);
             
             // // Unused in v2 >>
@@ -827,22 +973,22 @@ namespace Edgegap.Editor
             bool canStopDeployment = toolState.CanStopDeployment();
 
             // A bit dirty, but ensures the callback is not bound multiple times on the button.
-            _deploymentServerActionStopBtn.clickable.clicked -= StartServerCallback;
-            _deploymentServerActionStopBtn.clickable.clicked -= StopServerCallback;
+            _deploymentConnectionServerActionStopBtn.clickable.clicked -= startServerCallback;
+            _deploymentConnectionServerActionStopBtn.clickable.clicked -= stopServerCallback;
 
-            _deploymentServerActionStopBtn.SetEnabled(canStartDeployment || canStopDeployment);
+            _deploymentConnectionServerActionStopBtn.SetEnabled(canStartDeployment || canStopDeployment);
 
             _containerBuildAndPushServerBtn.SetEnabled(canStartDeployment);
 
             if (canStopDeployment)
             {
-                _deploymentServerActionStopBtn.text = "Stop Server";
-                _deploymentServerActionStopBtn.clickable.clicked += StopServerCallback;
+                _deploymentConnectionServerActionStopBtn.text = "Stop Server";
+                _deploymentConnectionServerActionStopBtn.clickable.clicked += stopServerCallback;
             }
             else
             {
-                _deploymentServerActionStopBtn.text = "Start Server";
-                _deploymentServerActionStopBtn.clickable.clicked += StartServerCallback;
+                _deploymentConnectionServerActionStopBtn.text = "Start Server";
+                _deploymentConnectionServerActionStopBtn.clickable.clicked += startServerCallback;
             }
         }
 

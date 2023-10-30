@@ -217,7 +217,7 @@ namespace Edgegap
                 }
                 else
                 {
-                    serverDataTree.Add(EdgegapServerDataManagerUtils.GetInfoText("Additionnal information will be displayed when the server is ready."));
+                    serverDataTree.Add(EdgegapServerDataManagerUtils.GetInfoText("Additional information will be displayed when the server is ready."));
                 }
             }
             else
