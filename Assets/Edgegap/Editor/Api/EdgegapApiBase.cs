@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Specialized;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Codice.Utils;
-using Newtonsoft.Json.Linq;
 using UnityEngine;
 
 namespace Edgegap.Editor.Api
@@ -17,39 +17,31 @@ namespace Edgegap.Editor.Api
     public abstract class EdgegapApiBase
     {
         #region Vars
-        private static string _baseUrlStaging => ApiEnvironment.Staging.GetDashboardUrl();
-        private static string _baseUrlConsole => ApiEnvironment.Console.GetApiUrl();
-        protected HttpClient _httpClient = new(); // Base address set
-
+        private readonly HttpClient _httpClient = new(); // Base address set
         protected ApiEnvironment SelectedApiEnvironment { get; }
-        protected string ApiToken { get; }
-        
         protected EdgegapWindowV2.LogLevel LogLevel { get; set; }
         protected bool IsLogLevelDebug => LogLevel == EdgegapWindowV2.LogLevel.Debug;
-        
+
         /// <summary>Based on SelectedApiEnvironment.</summary>
         /// <returns></returns>
-        protected string GetBaseUrl() =>
+        private string GetBaseUrl() =>
             SelectedApiEnvironment == ApiEnvironment.Staging
-                ? _baseUrlStaging
-                : _baseUrlConsole;
+                ? ApiEnvironment.Staging.GetApiUrl()
+                : ApiEnvironment.Console.GetApiUrl();
         #endregion // Vars
 
         
         /// <param name="apiEnvironment">"console" || "staging-console"?</param>
         /// <param name="apiToken">Without the "token " prefix, although we'll clear this if present</param>
-        /// <param name="baseUrlSuffix">Extended base url path; eg: "v1/wizard/" (!) with lingering "/" slash</param>
         /// <param name="logLevel">You may want more-verbose logs other than errs</param>
         protected EdgegapApiBase(
             ApiEnvironment apiEnvironment,
             string apiToken,
-            string baseUrlSuffix = "",
             EdgegapWindowV2.LogLevel logLevel = EdgegapWindowV2.LogLevel.Error)
         {
             this.SelectedApiEnvironment = apiEnvironment;
 
-            string url = $"{GetBaseUrl()}/{baseUrlSuffix}";
-            this._httpClient.BaseAddress = new Uri(url);
+            this._httpClient.BaseAddress = new Uri($"{GetBaseUrl()}/");
             this._httpClient.DefaultRequestHeaders.Accept.Add(
                 new MediaTypeWithQualityHeaderValue("application/json"));
 
@@ -71,14 +63,15 @@ namespace Edgegap.Editor.Api
         /// - Success => returns HttpResponseMessage result
         /// - Error => Catches errs => returns null (no rethrow)
         /// </returns>
-        protected async Task<HttpResponseMessage> PostAsync(string relativePath, string json = "{}")
+        protected async Task<HttpResponseMessage> PostAsync(string relativePath = "", string json = "{}")
         {
-            json = appendEdgegapDataToJSON(json);
             StringContent stringContent = new StringContent(json, Encoding.UTF8, "application/json");
             if (IsLogLevelDebug)
-                Debug.Log($"PostAsync to: `{_httpClient.BaseAddress}{relativePath}` with json: `{json}`");
-
-            return await ExecuteRequestAsync(() => _httpClient.PostAsync(relativePath, stringContent));
+                Debug.Log($"PostAsync to: `{_httpClient.BaseAddress}/{relativePath}` with json: `{json}`");
+            
+            // Normalize POST uri: Can't end with `/`.
+            Uri uri = new Uri(_httpClient.BaseAddress, relativePath);
+            return await ExecuteRequestAsync(() => _httpClient.PostAsync(uri, stringContent));
         }
         
         /// <summary>
@@ -92,19 +85,22 @@ namespace Edgegap.Editor.Api
         /// - Success => returns HttpResponseMessage result
         /// - Error => Catches errs => returns null (no rethrow)
         /// </returns>
-        protected async Task<HttpResponseMessage> GetAsync(string relativePath, string customQuery = "")
+        protected async Task<HttpResponseMessage> GetAsync(string relativePath = "", string customQuery = "")
         {
-            UriBuilder uriBuilder = prepareEdgegapUriWithQuery(relativePath, customQuery);
-            if (IsLogLevelDebug) Debug.Log($"GetAsync to: `{uriBuilder.Uri}`");
+            string completeRelativeUri = prepareEdgegapUriWithQuery(
+                relativePath,
+                customQuery);
             
-            return await ExecuteRequestAsync(() => _httpClient.GetAsync(uriBuilder.Uri));
+            if (IsLogLevelDebug) Debug.Log($"GetAsync to: `{completeRelativeUri}`");
+            
+            return await ExecuteRequestAsync(() => _httpClient.GetAsync(completeRelativeUri));
         }
         
         /// <summary>POST || GET</summary>
         /// <param name="requestFunc"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        protected virtual async Task<HttpResponseMessage> ExecuteRequestAsync(
+        private static async Task<HttpResponseMessage> ExecuteRequestAsync(
             Func<Task<HttpResponseMessage>> requestFunc, 
             CancellationToken cancellationToken = default)
         {
@@ -112,13 +108,6 @@ namespace Edgegap.Editor.Api
             try
             {
                 response = await requestFunc();
-
-                // Check for a successful status code
-                if (!response.IsSuccessStatusCode)
-                {
-                    Debug.LogError($"Error: {response.StatusCode} - {response.ReasonPhrase}");
-                    return null;
-                }
             }
             catch (HttpRequestException e)
             {
@@ -138,6 +127,20 @@ namespace Edgegap.Editor.Api
                 Debug.LogError($"Unexpected error occurred: {e.Message}");
                 return null;
             }
+            
+            // Check for a successful status code
+            if (response == null)
+            {
+                Debug.Log("!Success (null response) - returning 500");
+                return CreateUnknown500Err();
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                Debug.Log($"!Success: {(short)response.StatusCode} - " +
+                    $"{response.ReasonPhrase} - `{response.RequestMessage.RequestUri}` - " +
+                    $"{response.Content?.ReadAsStringAsync().Result}");
+            }
     
             return response;
         }
@@ -145,16 +148,8 @@ namespace Edgegap.Editor.Api
         
         
         #region Utils
-        /// <summary>Adds required body to json: source</summary>
-        /// <param name="json">Serialized json string from requester</param>
-        /// <returns></returns>
-        private static string appendEdgegapDataToJSON(string json)
-        {
-            JObject jsonObj = JObject.Parse(json);
-            jsonObj["source"] = "unity";
-            
-            return jsonObj.ToString();
-        }
+        private static HttpResponseMessage CreateUnknown500Err() =>
+            new(HttpStatusCode.InternalServerError); // 500 - Unknown
         
         /// <summary>
         /// Merges Edgegap-required query params (source) -> merges with custom query -> normalizes.
@@ -162,9 +157,13 @@ namespace Edgegap.Editor.Api
         /// <param name="relativePath"></param>
         /// <param name="customQuery"></param>
         /// <returns></returns>
-        private UriBuilder prepareEdgegapUriWithQuery(string relativePath, string customQuery)
+        private string prepareEdgegapUriWithQuery(string relativePath, string customQuery)
         {
-            UriBuilder uriBuilder = new UriBuilder(relativePath);
+            // Create UriBuilder using the BaseAddress
+            UriBuilder uriBuilder = new UriBuilder(_httpClient.BaseAddress);
+
+            // Add the relative path to the UriBuilder's path
+            uriBuilder.Path += relativePath;
 
             // Parse the existing query from the UriBuilder
             NameValueCollection query = HttpUtility.ParseQueryString(uriBuilder.Query);
@@ -182,7 +181,8 @@ namespace Edgegap.Editor.Api
             // Set the merged query back to the UriBuilder
             uriBuilder.Query = query.ToString();
 
-            return uriBuilder;
+            // Extract the complete relative URI and return it
+            return uriBuilder.Uri.PathAndQuery;
         }
         #endregion // Utils
     }

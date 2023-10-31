@@ -6,6 +6,8 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
 using Edgegap.Editor.Api;
+using Edgegap.Editor.Api.Models.Requests;
+using Edgegap.Editor.Api.Models.Results;
 using IO.Swagger.Model;
 using Newtonsoft.Json;
 using UnityEditor;
@@ -13,7 +15,6 @@ using UnityEditor.Build.Reporting;
 using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.Assertions;
-using UnityEngine.Serialization;
 using UnityEngine.UIElements;
 using Application = UnityEngine.Application;
 
@@ -40,6 +41,7 @@ namespace Edgegap.Editor
         private bool IsLogLevelDebug => logLevel == LogLevel.Debug;
         
         private const int SERVER_STATUS_CRON_JOB_INTERVAL_MS = 10000; // Interval at which the server status is updated
+        private const string EDGEGAP_CREATE_TOKEN_URL = "https://app.edgegap.com/user-settings?tab=tokens";
         private const string EDGEGAP_CONTACT_EN_URL = "https://edgegap.com/en/resources/contact";
         private const string EDITOR_DATA_SERIALIZATION_NAME = "EdgegapSerializationData";
 
@@ -86,21 +88,19 @@ namespace Edgegap.Editor
         private readonly System.Timers.Timer _updateServerStatusCronjob = new(SERVER_STATUS_CRON_JOB_INTERVAL_MS);
         private VisualTreeAsset _visualTree;
         private bool _shouldUpdateServerStatus = false;
+        private bool _isContainerRegistryReady;
         
         #region Vars -> Serialized fields for Editor value persistence
         // Editor persistence >> Not from UI
         [SerializeField] private bool _isApiTokenVerified; // Toggles the rest of the UI
         [SerializeField] private string _deploymentRequestId;
         [SerializeField] private string _userExternalIp;
-        [FormerlySerializedAs("_isRegistryReady")]
-        [SerializeField] private bool _isContainerRegistryReady;
         [SerializeField] private ApiEnvironment _apiEnvironment; // TODO: Swap out hard-coding with UI element?
         [SerializeField] private string _appVersionName; // TODO: Swap out hard-coding with UI element?
         // [SerializeField] private bool _autoIncrementTag = true; // TODO?
         // [SerializeField] private string _containerImageTag; // TODO?
         
         // Editor persistence >> From UI >> Header
-        [FormerlySerializedAs("_apiTokenInputStr")]
         [SerializeField] private string _apiTokenInputUnmaskedStr;
         
         // Editor persistence >>  From UI >> Application Info
@@ -202,15 +202,18 @@ namespace Edgegap.Editor
 
             // Register callbacks and sync UI builder elements to fields here
             InitUIElements();
-            SyncFormWithObject();
+            syncFormWithObjectStatic();
+            syncFormWithObjectDynamic();
 
+            #region Legacy code from v1 // TODO - Look into what this does
             // If we cached a deploymentId, restore the settings
-            bool hasActiveDeployment = !string.IsNullOrEmpty(_deploymentRequestId);
-
-            if (hasActiveDeployment)
-                RestoreActiveDeployment();
-            else
-                DisconnectCallback();
+            // bool hasActiveDeployment = !string.IsNullOrEmpty(_deploymentRequestId);
+            //
+            // if (hasActiveDeployment)
+            //     RestoreActiveDeployment();
+            // else
+            //     DisconnectCallback();
+            #endregion // Legacy code from v1: TODO - Look into what this does
         }
 
         protected void OnDestroy()
@@ -231,6 +234,7 @@ namespace Edgegap.Editor
         protected void OnDisable()
         {
             unregisterClickEvents();
+            unregisterFieldCallbacks();
             SyncObjectWithForm();
             SaveToolData();
             EdgegapServerDataManager.DeregisterServerDataContainer(_deploymentServerDataContainer);
@@ -247,9 +251,21 @@ namespace Edgegap.Editor
         {
             setVisualElementsToFields();
             assertVisualElementKeys();
+            closeDisableGroups();
             registerClickCallbacks();
             registerFieldCallbacks();
             loadRegisterInitServerDataUiElements();
+        }
+
+        private void closeDisableGroups()
+        {
+            _appInfoFoldout.value = false;
+            _containerRegistryFoldout.value = false;
+            _deploymentsFoldout.value = false;
+            
+            _appInfoFoldout.SetEnabled(false);
+            _containerRegistryFoldout.SetEnabled(false);
+            _deploymentsFoldout.SetEnabled(false);
         }
 
         /// <summary>
@@ -316,11 +332,10 @@ namespace Edgegap.Editor
         /// </summary>
         private void registerFieldCallbacks()
         {
-            _apiTokenMaskedInput.RegisterValueChangedCallback(ApiTokenInputChanged);
-            _apiTokenMaskedInput.RegisterCallback<FocusOutEvent>(ApiTokenInputFocusOut);
-            
-            _appIconSpriteObjInput.RegisterValueChangedCallback(AppIconSpriteObjInput);
-            _containerUseCustomRegistryToggle.RegisterValueChangedCallback(ContainerUseCustomRegistryToggle);
+            _apiTokenMaskedInput.RegisterValueChangedCallback(onApiTokenInputChanged);
+            _apiTokenMaskedInput.RegisterCallback<FocusOutEvent>(onApiTokenInputFocusOut);
+
+            _containerUseCustomRegistryToggle.RegisterValueChangedCallback(onContainerUseCustomRegistryToggle);
         }
 
         /// <summary>
@@ -412,11 +427,12 @@ namespace Edgegap.Editor
 
         private void onDebugBtnClick()
         {
-            if (IsLogLevelDebug) Debug.Log("onDebugBtnClick");
-            _postAuthContainer.SetEnabled(!_postAuthContainer.enabledInHierarchy);
+            // if (IsLogLevelDebug) Debug.Log("onDebugBtnClick");
+            // _postAuthContainer.SetEnabled(!_postAuthContainer.enabledInHierarchy);
+            onAppCreateBtnClick();
         }
         
-        private void onApiTokenVerifyBtnClick() => verifyApiToken();
+        private void onApiTokenVerifyBtnClick() => verifyApiTokenGetRegistryCreds();
         private void onApiTokenGetBtnClick() => getApiToken();
         private void onAppCreateBtnClick() => createApp();
         private void onContainerBuildAndPushServerBtnClick() => buildAndPushServer();
@@ -442,6 +458,14 @@ namespace Edgegap.Editor
             _deploymentConnectionServerActionStopBtn.clickable.clicked -= onDeploymentServerActionStopBtnClick;
             _footerDocumentationBtn.clickable.clicked -= onFooterDocumentationBtnClick;
             _footerNeedMoreGameServersBtn.clickable.clicked -= onFooterNeedMoreGameServersBtnClick;
+        }
+
+        private void unregisterFieldCallbacks()
+        {
+            _apiTokenMaskedInput.UnregisterValueChangedCallback(onApiTokenInputChanged);
+            _apiTokenMaskedInput.UnregisterCallback<FocusOutEvent>(onApiTokenInputFocusOut);
+
+            _containerUseCustomRegistryToggle.UnregisterValueChangedCallback(onContainerUseCustomRegistryToggle);
         }
         
         private void ConnectCallback()
@@ -473,7 +497,7 @@ namespace Edgegap.Editor
         
         private void SyncObjectWithForm()
         {
-            // Looking for _apiTokenInputUnmaskedStr? This is already handed @ ApiTokenInputChanged()
+            // -> Looking for _apiTokenInputUnmaskedStr? This is already handed @ onApiTokenInputChanged()
             _appNameInputStr = _appNameInput.value;
             _appIconSpriteObj = _appIconSpriteObjInput.value as Sprite;
                 
@@ -490,14 +514,15 @@ namespace Edgegap.Editor
             // _autoIncrementTag = _autoIncrementTagInput.value; // TODO: Unused in V2 UI
         }
 
-        private void SyncFormWithObject()
+        private void syncFormWithObjectStatic()
         {
             // Fill the masked input with '*' chars instead of the actual val
-            _apiTokenMaskedInput.value = _apiTokenInputUnmaskedStr; // This will auto-mask with `*` on change
+            _apiTokenMaskedInput.value = _apiTokenInputUnmaskedStr;
+            maskApiTokenInput();
             
             // Only show the rest of the form if apiToken is verified
             _postAuthContainer.SetEnabled(_isApiTokenVerified);
-            
+
             _appNameInput.value = _appNameInputStr;
             _appIconSpriteObjInput.value = _appIconSpriteObj;
             
@@ -513,6 +538,18 @@ namespace Edgegap.Editor
             
             // _containerImageTagInput.value = _containerImageTag; // TODO: Unused in V2 UI
             // _autoIncrementTagInput.value = _autoIncrementTag;  // TODO: Unused in V2 UI
+        }
+
+        /// <summary>Sync form further based on API call results.</summary>
+        private async Task syncFormWithObjectDynamic()
+        {
+            if (string.IsNullOrEmpty(_apiTokenInputUnmaskedStr))
+                return;
+            
+            if (IsLogLevelDebug) Debug.Log("syncFormWithObjectDynamic: Found APIToken; " +
+                "calling verifyApiTokenGetRegistryCreds");
+            
+            await verifyApiTokenGetRegistryCreds();
         }
         
         /// <summary>From UI "Verify" btn</summary>
@@ -580,7 +617,7 @@ namespace Edgegap.Editor
         /// so we do it manually on change, storing the actual value elsewhere
         /// </summary>
         /// <param name="evt"></param>
-        private void ApiTokenInputChanged(ChangeEvent<string> evt)
+        private void onApiTokenInputChanged(ChangeEvent<string> evt)
         {
             // Cache the real token val
             if (!evt.newValue.StartsWith('*'))
@@ -590,43 +627,82 @@ namespace Edgegap.Editor
             _isApiTokenVerified = false;
             _postAuthContainer.SetEnabled(false);
         }
-        
+
         /// <summary>Replace the input with masked `*` chars on focus out</summary>
         /// <param name="evt"></param>
-        private void ApiTokenInputFocusOut(FocusOutEvent evt) =>
-            _apiTokenMaskedInput.value = "".PadLeft(_apiTokenInputUnmaskedStr.Length, '*');
+        private void onApiTokenInputFocusOut(FocusOutEvent evt) => maskApiTokenInput();
         
-        private void ContainerUseCustomRegistryToggle(ChangeEvent<bool> evt) =>
+        /// <summary>On toggle, enable || disable the custom registry inputs (below the Toggle).</summary>
+        private void onContainerUseCustomRegistryToggle(ChangeEvent<bool> evt) =>
             _containerCustomRegistryWrapper.SetEnabled(evt.newValue);
-        
-        private void AppIconSpriteObjInput(ChangeEvent<UnityEngine.Object> evt)
-        {
-            // TODO: Show preview?
-        }
         #endregion // Immediate non-button changes
-        
-        private async Task verifyApiToken()
+
+
+        private void maskApiTokenInput() =>
+            _apiTokenMaskedInput.value = "".PadLeft(_apiTokenInputUnmaskedStr.Length, '*');
+
+        /// <summary>From Sprite -> to Base64</summary>
+        /// <param name="sprite"></param>
+        /// <returns>imageBase64Str</returns>
+        private string getBase64StrFromSprite(Sprite sprite)
         {
-            if (IsLogLevelDebug) Debug.Log("verifyApiToken");
+            try
+            {
+                Texture2D texture = sprite.texture;
+                byte[] textureBytes = texture.EncodeToPNG();
+                string base64ImageString = Convert.ToBase64String(textureBytes);
+
+                return base64ImageString;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"Error: {e.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Verifies token => apps/container groups -> gets registry creds (if any).
+        /// TODO: UX - Show loading spinner.
+        /// </summary>
+        private async Task verifyApiTokenGetRegistryCreds()
+        {
+            if (IsLogLevelDebug) Debug.Log("verifyApiTokenGetRegistryCreds");
                 
             EdgegapWizardApi wizardApi = new EdgegapWizardApi(
                 API_ENVIRONMENT, 
                 _apiTokenInputUnmaskedStr.Trim(),
                 logLevel);
             
-            HttpStatusCode resultStatusCode = await wizardApi.InitQuickStart();
+            HttpStatusCode initQuickStartResultCode = await wizardApi.InitQuickStart();
             
-            _isApiTokenVerified = resultStatusCode == HttpStatusCode.NoContent; // 204
-            SyncContainerEnablesToState();
-
+            _isApiTokenVerified = initQuickStartResultCode == HttpStatusCode.NoContent; // 204
             if (!_isApiTokenVerified)
+            {
+                SyncContainerEnablesToState();
                 return;
+            }
             
-            // Verified: TODO: Get app info so
-            
-            
-            // Toggle the remainder of the form
-            // SyncContainerEnablesToState();
+            // Verified: Let's see if we have active registry credentials // TODO: This will later be a result model
+            HttpStatusCode getRegistryCredentialsResultCode = await wizardApi.GetRegistryCredentials();
+            if (getRegistryCredentialsResultCode == HttpStatusCode.OK)
+                prefillContainerRegistryForm();
+
+            // Unlock the rest of the form, whether we prefill the container registry or not
+            SyncContainerEnablesToState();
+        }
+
+        /// <summary>
+        /// We have container registry params; we'll prefill the fields:
+        /// - url
+        /// - project
+        /// - username
+        /// - token
+        /// </summary>
+        /// <param name="registryCredentials">TODO - this will later be passed</param>
+        private void prefillContainerRegistryForm()
+        {
+            // TODO: Fill in container registry input fields from GetRegistryCredentials() result data
         }
 
         /// <summary>
@@ -644,10 +720,10 @@ namespace Edgegap.Editor
             bool isApiTokenVerifiedAndContainerReady = _isApiTokenVerified && _isContainerRegistryReady;
             
             _containerRegistryFoldout.SetEnabled(isApiTokenVerifiedAndContainerReady);
-            _containerRegistryFoldout.value = isApiTokenVerifiedAndContainerReady;
+            _containerRegistryFoldout.value = isApiTokenVerifiedAndContainerReady && _containerUseCustomRegistryToggle.value;
             
             _deploymentsFoldout.SetEnabled(isApiTokenVerifiedAndContainerReady);
-            _deploymentsFoldout.value = isApiTokenVerifiedAndContainerReady;
+            _deploymentsFoldout.value = isApiTokenVerifiedAndContainerReady && _containerUseCustomRegistryToggle.value;
 
             // + Requires _containerUseCustomRegistryToggleBool
             _containerCustomRegistryWrapper.SetEnabled(isApiTokenVerifiedAndContainerReady && 
@@ -657,19 +733,50 @@ namespace Edgegap.Editor
         private void getApiToken()
         {
             if (IsLogLevelDebug) Debug.Log("getApiToken");
-            throw new NotImplementedException("TODO: getApiToken");
+            Application.OpenURL(EDGEGAP_CREATE_TOKEN_URL);
         }
         
-        private void createApp()
+        /// <summary>
+        /// TODO: Add err handling for reaching app limit (max 2 for free tier).
+        /// </summary>
+        /// <exception cref="NotImplementedException"></exception>
+        private async Task createApp()
         {
             if (IsLogLevelDebug) Debug.Log("createApp");
-            throw new NotImplementedException("TODO: createApp");
+            
+            EdgegapAppApi appApi = new EdgegapAppApi(
+                API_ENVIRONMENT, 
+                _apiTokenInputUnmaskedStr.Trim(),
+                logLevel);
+
+            CreateApplicationResult result = await appApi.CreateApp(new CreateApplicationRequest
+            {
+                AppName = _appNameInput.value,
+                Image = getBase64StrFromSprite(_appIconSpriteObj) ?? "",
+                IsActive = true,
+            });
+            
+            // Assert create time is not null or empty
+            if (string.IsNullOrEmpty(result.CreateTimeStr))
+            {
+                EditorUtility.DisplayDialog(
+                    "Error",
+                    "Failed to create the app (unknown error)",
+                    "Ok"
+                );
+
+                return;
+            }
+
+            _isContainerRegistryReady = true;
+            SyncContainerEnablesToState();
+            throw new NotImplementedException("TODO: Display UI result of createApp");
         }
 
         /// <summary>Open contact form in desired locale</summary>
         private void openNeedMoreGameServersWebsite()
         {
-            // TODO: Swap site to French, if French locale >> Currently, there is no French-specific Contact form
+            //// TODO: Localized contact form
             // bool isFrenchLocale = Application.systemLanguage == SystemLanguage.French;
             Application.OpenURL(EDGEGAP_CONTACT_EN_URL);
         }
@@ -781,7 +888,7 @@ namespace Edgegap.Editor
 
                 // cleanup
                 // _containerImageTag = tag; // TODO?
-                SyncFormWithObject();
+                syncFormWithObjectStatic();
                 EditorUtility.ClearProgressBar();
                 SetToolUIState(ToolState.Connected);
 
