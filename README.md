@@ -3,6 +3,8 @@
 Source Code for Unity Plugin for Edgegap Integration
 More information can be found on [Edgegap Documentation](https://docs.edgegap.com/docs/tools-and-integrations/unity-plugin)
 
+![Edgegap Settings Manager](https://i.imgur.com/ttH338r.png)
+
 ## Installing the package
 
 ### From Unity store

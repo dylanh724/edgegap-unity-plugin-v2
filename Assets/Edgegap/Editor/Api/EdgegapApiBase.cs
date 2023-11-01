@@ -19,8 +19,8 @@ namespace Edgegap.Editor.Api
         #region Vars
         private readonly HttpClient _httpClient = new(); // Base address set
         protected ApiEnvironment SelectedApiEnvironment { get; }
-        protected EdgegapWindowV2.LogLevel LogLevel { get; set; }
-        protected bool IsLogLevelDebug => LogLevel == EdgegapWindowV2.LogLevel.Debug;
+        protected EdgegapWindowMetadata.LogLevel LogLevel { get; set; }
+        protected bool IsLogLevelDebug => LogLevel == EdgegapWindowMetadata.LogLevel.Debug;
 
         /// <summary>Based on SelectedApiEnvironment.</summary>
         /// <returns></returns>
@@ -37,7 +37,7 @@ namespace Edgegap.Editor.Api
         protected EdgegapApiBase(
             ApiEnvironment apiEnvironment,
             string apiToken,
-            EdgegapWindowV2.LogLevel logLevel = EdgegapWindowV2.LogLevel.Error)
+            EdgegapWindowMetadata.LogLevel logLevel = EdgegapWindowMetadata.LogLevel.Error)
         {
             this.SelectedApiEnvironment = apiEnvironment;
 

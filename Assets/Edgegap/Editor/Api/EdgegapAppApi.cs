@@ -3,9 +3,6 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Edgegap.Editor.Api.Models.Requests;
 using Edgegap.Editor.Api.Models.Results;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using UnityEngine;
 
 namespace Edgegap.Editor.Api
 {
@@ -18,7 +15,7 @@ namespace Edgegap.Editor.Api
         public EdgegapAppApi(
             ApiEnvironment apiEnvironment, 
             string apiToken, 
-            EdgegapWindowV2.LogLevel logLevel = EdgegapWindowV2.LogLevel.Error)
+            EdgegapWindowMetadata.LogLevel logLevel = EdgegapWindowMetadata.LogLevel.Error)
             : base(apiEnvironment, apiToken, logLevel)
         {
         }
@@ -29,23 +26,21 @@ namespace Edgegap.Editor.Api
         /// POST to v1/app: Create an application that will regroup application versions.
         /// - API Doc | https://docs.edgegap.com/api/#tag/Applications/operation/application-post 
         /// </summary>
-        /// <returns>CreateApplicationResult; 200 == success</returns>
-        public async Task<CreateApplicationResult> CreateApp(CreateApplicationRequest request)
+        /// <returns>
+        /// Http info with CreateApplicationResult data model
+        /// - Success: 200 (no result model)
+        /// - Fail: 409 (app already exists), 400 (reached limit)
+        /// </returns>
+        public async Task<EdgegapHttpResult<CreateApplicationResult>> CreateApp(CreateApplicationRequest request)
         {
             HttpResponseMessage response = await PostAsync("v1/app", request.ToString());
+            EdgegapHttpResult<CreateApplicationResult> result = new(response);
+            
             bool isSuccess = response.StatusCode == HttpStatusCode.OK; // 200
-
             if (!isSuccess)
-                return null;
+                return result;
             
-            // Serialize result to CreateApplicationResult
-            string resultJson = await response.Content.ReadAsStringAsync();
-            CreateApplicationResult resultObj = JsonConvert.DeserializeObject<CreateApplicationResult>(resultJson);
-
-            if (IsLogLevelDebug)
-                Debug.Log($"{nameof(CreateApp)} result: {JObject.Parse(resultJson)}");
-            
-            return resultObj;
+            return result;
         }
         #endregion // API Methods
     }

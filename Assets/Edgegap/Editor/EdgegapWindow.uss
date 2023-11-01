@@ -88,9 +88,13 @@
     border-bottom-color: rgba(0, 0, 0, 0.35);
     height: 27px;
     -unity-font-style: bold;
-    background-color: rgb(173, 173, 173);
+    background-color: rgb(36, 76, 87);
     min-width: 170px;
     max-width: 200px;
+}
+
+.button-edgegap:hover {
+    background-color: rgb(56, 96, 107);
 }
 
 .container-row-parent {
@@ -126,6 +130,10 @@ Toggle > #unity-checkmark {
 
 .bg-purple {
     background-color: rgb(44, 30, 210);
+}
+
+.bg-purple:hover {
+    background-color: rgb(64, 50, 230);
 }
 
 .unity-foldout {
@@ -169,4 +177,14 @@ Toggle > #unity-checkmark {
     font-size: 12px;
     white-space: nowrap;
     text-overflow: clip;
+}
+
+.shakeStart {
+    left: 5px; /* or however much you want to displace it */
+    transition: left 50ms ease-in-out; /* or adjust for the feel you want */
+}
+
+.shakeEnd {
+    left: -5px;
+    transition: left 50ms ease-in-out;
 }

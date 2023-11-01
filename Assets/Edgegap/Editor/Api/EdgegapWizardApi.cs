@@ -1,6 +1,6 @@
-using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Edgegap.Editor.Api.Models.Results;
 using Newtonsoft.Json.Linq;
 
 namespace Edgegap.Editor.Api
@@ -12,7 +12,7 @@ namespace Edgegap.Editor.Api
         public EdgegapWizardApi(
             ApiEnvironment apiEnvironment, 
             string apiToken, 
-            EdgegapWindowV2.LogLevel logLevel = EdgegapWindowV2.LogLevel.Error)
+            EdgegapWindowMetadata.LogLevel logLevel = EdgegapWindowMetadata.LogLevel.Error)
             : base(apiEnvironment, apiToken, logLevel)
         {
         }
@@ -20,29 +20,32 @@ namespace Edgegap.Editor.Api
 
         #region API Methods
         /// <summary>POST to v1/wizard/init-quick-start</summary>
-        /// <returns>resultCode; 204 on success</returns>
-        public async Task<HttpStatusCode> InitQuickStart()
+        /// <returns>
+        /// Http info with no explicit data model
+        /// - Success: 204 (no result model)
+        /// </returns>
+        public async Task<EdgegapHttpResult> InitQuickStart()
         {
             string json = new JObject { ["source"] = "unity" }.ToString();
             HttpResponseMessage response = await PostAsync("v1/wizard/init-quick-start", json);
-            HttpStatusCode resultStatusCode = response.StatusCode; 
+            EdgegapHttpResult result = new(response);
             
-            // bool isSuccess = resultStatusCode == HttpStatusCode.NoContent; // 204
-            return resultStatusCode;
+            return result;
         }
         
         /// <summary>GET to v1/wizard/registry-credentials</summary>
         /// <returns>
-        /// - TODO: This will later return a data model later; 200 (or 204?) on success
-        /// - There will only be errs if called before a successful InitQuickStart().
+        /// - Http info with GetRegistryCredentialsResult data model
+        /// - Success: 200
+        /// - Error: Likely if called before a successful InitQuickStart(),
+        ///   or if called in a staging env. Soon, this will be available in production.
         /// </returns>
-        public async Task<HttpStatusCode> GetRegistryCredentials()
+        public async Task<EdgegapHttpResult<GetRegistryCredentialsResult>> GetRegistryCredentials()
         {
             HttpResponseMessage response = await GetAsync("v1/wizard/registry-credentials");
-            HttpStatusCode resultStatusCode = response.StatusCode; 
+            EdgegapHttpResult<GetRegistryCredentialsResult> result = new(response);
             
-            // bool isSuccess = resultStatusCode == HttpStatusCode.OK; // 200
-            return resultStatusCode;
+            return result;
         }
         #endregion // API Methods
     }
