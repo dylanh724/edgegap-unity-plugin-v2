@@ -633,6 +633,8 @@ namespace Edgegap.Editor
         /// <exception cref="NotImplementedException"></exception>
         private async Task createApplication()
         {
+            throw new NotImplementedException("TODO: createApplication (legacy code not yet tested to be compatible with v2");
+            
             if (IsLogLevelDebug) Debug.Log("createApplication");
             
             // Hide previous result labels, disable btns (to reenable when done)
@@ -882,6 +884,8 @@ namespace Edgegap.Editor
         /// <summary>Legacy from v1 - untested</summary>
         private async void buildAndPushServer()
         {
+            throw new NotImplementedException("TODO: buildAndPushServer (legacy code not yet tested to be compatible with v2");
+            
             if (IsLogLevelDebug) Debug.Log("buildAndPushServer");
             hideResultLabels();
             
@@ -998,6 +1002,8 @@ namespace Edgegap.Editor
         /// <summary>Legacy from v1 - untested</summary>
         private async void stopServerCallback()
         {
+            throw new NotImplementedException("TODO: stopServerCallback (legacy code not yet tested to be compatible with v2");
+            
             if (IsLogLevelDebug) Debug.Log("stopServerCallback");
             hideResultLabels();
             
@@ -1035,6 +1041,8 @@ namespace Edgegap.Editor
         /// <summary>Legacy from v1 - untested</summary>
         private async void updateServerStatus()
         {
+            throw new NotImplementedException("TODO: updateServerStatus (legacy code not yet tested to be compatible with v2");
+            
             if (IsLogLevelDebug) Debug.Log("updateServerStatus");
             hideResultLabels();
             
