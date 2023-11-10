@@ -327,9 +327,17 @@ namespace Edgegap.Editor
         // TODO UX: On error, reflect UI
         // ##########################################################
 
-        /// <summary>Experiment here!</summary>
+        /// <summary>
+        /// Experiment here! You may want to log what you're doing
+        /// in case you inadvertently leave it on.
+        /// </summary>
         private void onDebugBtnClick()
         {
+            Debug.Log("onDebugBtnClick: Enabling foldout groups");
+            _appInfoFoldout.SetEnabled(true);
+            _appInfoFoldout.SetEnabled(true);
+            _containerRegistryFoldout.SetEnabled(true);
+            _deploymentsFoldout.SetEnabled(true);
         }
         
         private void onApiTokenVerifyBtnClick() => verifyApiTokenGetRegistryCreds();
