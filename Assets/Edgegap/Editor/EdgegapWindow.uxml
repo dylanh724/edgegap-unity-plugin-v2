@@ -51,8 +51,8 @@
                             <ui:VisualElement name="ContainerTokenRow" class="container-row" style="flex-grow: 1; align-items: center; flex-direction: row; justify-content: flex-start; align-self: auto;">
                                 <ui:TextField name="ContainerTokenTxt" label="Token" view-data-key="appName" tooltip="Custom registry password/token" password="true" class="text-edgegap" />
                             </ui:VisualElement>
-                            <ui:Button name="ContainerBuildAndPushBtn" text="Build and Push" class="button-edgegap text-edgegap" style="margin-left: 0;" />
                         </ui:VisualElement>
+                        <ui:Button name="ContainerBuildAndPushBtn" text="Build and Push" class="button-edgegap text-edgegap" style="margin-left: 0;" />
                     </ui:Foldout>
                 </ui:VisualElement>
                 <ui:Foldout text="&lt;b&gt;Deployments&lt;/b&gt;" name="DeploymentsFoldout" class="text-edgegap container-row-parent">
