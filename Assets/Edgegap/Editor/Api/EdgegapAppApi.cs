@@ -42,6 +42,28 @@ namespace Edgegap.Editor.Api
             
             return result;
         }
+        
+        /// <summary>
+        /// PATCH to v1/app: Update an application version with new specifications.
+        /// - API Doc | https://docs.edgegap.com/api/#tag/Applications/operation/app-versions-patch
+        /// </summary>
+        /// <returns>
+        /// Http info with CreateApplicationResult data model
+        /// - Success: 200 (no result model)
+        /// - Fail: 409 (app already exists), 400 (reached limit)
+        /// </returns>
+        public async Task<EdgegapHttpResult<CreateApplicationResult>> UpdateAppVersion(UpdateAppVersionRequest request)
+        {
+            string relativePath = $"v1/app/{request.AppName}/version/{request.VersionName}";
+            HttpResponseMessage response = await PatchAsync(relativePath, request.ToString());
+            EdgegapHttpResult<CreateApplicationResult> result = new(response);
+            
+            bool isSuccess = response.StatusCode == HttpStatusCode.OK; // 200
+            if (!isSuccess)
+                return result;
+            
+            return result;
+        }
         #endregion // API Methods
     }
 }

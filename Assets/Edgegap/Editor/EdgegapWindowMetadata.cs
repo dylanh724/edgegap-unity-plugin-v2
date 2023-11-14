@@ -2,6 +2,10 @@ using System;
 
 namespace Edgegap.Editor
 {
+    /// <summary>
+    /// Contains static metadata / options for the EdgegapWindowV2 UI.
+    /// - Notable: SHOW_DEBUG_BTN, LOG_LEVEL, DEFAULT_TAG, SKIP_SERVER_BUILD_WHEN_PUSHING, SKIP_DOCKER_IMAGE_BUILD_WHEN_PUSHING
+    /// </summary>
     public static class EdgegapWindowMetadata
     {
         /// <summary>Log Debug+, or Errors only?</summary>
@@ -11,17 +15,45 @@ namespace Edgegap.Editor
             Error,
         }
 
-        /// <summary>TODO: Move opt to UI?</summary>
+        /// <summary>Set to Debug to show more logs. Default `Error`. TODO: Move opt to UI?</summary>
         public const LogLevel LOG_LEVEL = LogLevel.Error;
+        
+        /// <summary>
+        /// Set to show a debug button at the top-right for arbitrary testing.
+        /// Default enables groups. Default `false`.
+        /// </summary>
         public const bool SHOW_DEBUG_BTN = false;
 
-        public const int SERVER_STATUS_CRON_JOB_INTERVAL_MS = 10000; // Interval at which the server status is updated
-        public const string EDGEGAP_CREATE_TOKEN_URL = "https://app.edgegap.com/user-settings?tab=tokens";
+        /// <summary>Interval at which the server status is updated</summary>
+        public const int SERVER_STATUS_CRON_JOB_INTERVAL_MS = 10000;
+        
+        public const string EDGEGAP_GET_A_TOKEN_URL = "https://app.edgegap.com/?oneClick=true";
         public const string EDGEGAP_CONTACT_EN_URL = "https://edgegap.com/en/resources/contact";
+        public const string EDGEGAP_HOW_TO_LOGIN_VIA_CLI_DOC_URL = "https://docs.edgegap.com/docs/container/edgegap-container-registry/#getting-your-credentials";
         public const string EDITOR_DATA_SERIALIZATION_NAME = "EdgegapSerializationData";
-        public const string SUCCESS_COLOR_HEX = "#8AEE8C"; // Earthy lime green
-        public const string FAIL_COLOR_HEX = "#EE9A8A"; // Blood orange
-
+        public const string DEFAULT_TAG = "latest";
+        
+        /// <summary>
+        /// When running a Docker-based "Build & Push" flow, skip building the Unity server binary
+        /// (great for testing push flow). Default false.
+        /// </summary>
+        public const bool SKIP_SERVER_BUILD_WHEN_PUSHING = true;
+        
+        /// <summary>
+        /// When running a Docker-based "Build & Push" flow, skip building the Docker image
+        /// (great for testing registry login mechanics). Default false.
+        /// </summary>
+        public const bool SKIP_DOCKER_IMAGE_BUILD_WHEN_PUSHING = true;
+        
+        /// <summary>Earthy lime green</summary>
+        public const string SUCCESS_COLOR_HEX = "#8AEE8C";
+        
+        /// <summary>Calming light orange</summary>
+        public const string WARN_COLOR_HEX = "#EEC58A";
+        
+        /// <summary>Vivid blood orange </summary>
+        public const string FAIL_COLOR_HEX = "#EE9A8A";
+        
         #region Player Pref Key Ids for persistence
         /// <summary>Cached as base64</summary>
         public const string API_TOKEN_KEY_STR_PREF_ID = "ApiTokenKey";

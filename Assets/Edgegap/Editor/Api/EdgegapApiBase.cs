@@ -55,7 +55,7 @@ namespace Edgegap.Editor.Api
         
         #region HTTP Requests
         /// <summary>
-        /// We already added "https://api.edgegap.com/" (or similar) BaseAddress via constructor.
+        /// POST: We already added "https://api.edgegap.com/" (or similar) BaseAddress via constructor.
         /// </summary>
         /// <param name="relativePath"></param>
         /// <param name="json">Serialize to your model via Newtonsoft</param>
@@ -65,13 +65,41 @@ namespace Edgegap.Editor.Api
         /// </returns>
         protected async Task<HttpResponseMessage> PostAsync(string relativePath = "", string json = "{}")
         {
-            StringContent stringContent = new StringContent(json, Encoding.UTF8, "application/json");
+            StringContent stringContent = CreateStringContent(json);
             if (IsLogLevelDebug)
                 Debug.Log($"PostAsync to: `{_httpClient.BaseAddress}/{relativePath}` with json: `{json}`");
             
             // Normalize POST uri: Can't end with `/`.
             Uri uri = new Uri(_httpClient.BaseAddress, relativePath);
             return await ExecuteRequestAsync(() => _httpClient.PostAsync(uri, stringContent));
+        }
+        
+        /// <summary>
+        /// PATCH: We already added "https://api.edgegap.com/" (or similar) BaseAddress via constructor.
+        /// </summary>
+        /// <param name="relativePath"></param>
+        /// <param name="json">Serialize to your model via Newtonsoft</param>
+        /// <returns>
+        /// - Success => returns HttpResponseMessage result
+        /// - Error => Catches errs => returns null (no rethrow)
+        /// </returns>
+        protected async Task<HttpResponseMessage> PatchAsync(string relativePath = "", string json = "{}")
+        {
+            StringContent stringContent = CreateStringContent(json);
+            if (IsLogLevelDebug)
+                Debug.Log($"PatchAsync to: `{_httpClient.BaseAddress}/{relativePath}` with json: `{json}`");
+            
+            // Normalize PATCH uri: Can't end with `/`.
+            Uri uri = new Uri(_httpClient.BaseAddress, relativePath);
+            
+            // (!) As of 11/15/2023, .PatchAsync() is "unsupported by Unity" -- so we manually set the verb and SendAsync()
+            // Create the request manually
+            HttpRequestMessage patchRequest = new HttpRequestMessage(new HttpMethod("PATCH"), uri) 
+            {
+                Content = stringContent,
+            };
+            
+            return await ExecuteRequestAsync(() => _httpClient.SendAsync(patchRequest));
         }
         
         /// <summary>
@@ -148,6 +176,12 @@ namespace Edgegap.Editor.Api
         
         
         #region Utils
+        /// <summary>Creates a UTF-8 encoded application/json + json obj</summary>
+        /// <param name="json">Arbitrary json obj</param>
+        /// <returns></returns>
+        private StringContent CreateStringContent(string json = "{}") =>
+            new (json, Encoding.UTF8, "application/json");
+        
         private static HttpResponseMessage CreateUnknown500Err() =>
             new(HttpStatusCode.InternalServerError); // 500 - Unknown
         
