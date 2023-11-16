@@ -4,7 +4,7 @@ namespace Edgegap.Editor
 {
     /// <summary>
     /// Contains static metadata / options for the EdgegapWindowV2 UI.
-    /// - Notable: SHOW_DEBUG_BTN, LOG_LEVEL, DEFAULT_TAG, SKIP_SERVER_BUILD_WHEN_PUSHING, SKIP_DOCKER_IMAGE_BUILD_WHEN_PUSHING
+    /// - Notable: SHOW_DEBUG_BTN, LOG_LEVEL, DEFAULT_VERSION_TAG, SKIP_SERVER_BUILD_WHEN_PUSHING, SKIP_DOCKER_IMAGE_BUILD_WHEN_PUSHING
     /// </summary>
     public static class EdgegapWindowMetadata
     {
@@ -16,7 +16,7 @@ namespace Edgegap.Editor
         }
 
         /// <summary>Set to Debug to show more logs. Default `Error`. TODO: Move opt to UI?</summary>
-        public const LogLevel LOG_LEVEL = LogLevel.Error;
+        public const LogLevel LOG_LEVEL = LogLevel.Debug;
         
         /// <summary>
         /// Set to show a debug button at the top-right for arbitrary testing.
@@ -31,7 +31,7 @@ namespace Edgegap.Editor
         public const string EDGEGAP_CONTACT_EN_URL = "https://edgegap.com/en/resources/contact";
         public const string EDGEGAP_HOW_TO_LOGIN_VIA_CLI_DOC_URL = "https://docs.edgegap.com/docs/container/edgegap-container-registry/#getting-your-credentials";
         public const string EDITOR_DATA_SERIALIZATION_NAME = "EdgegapSerializationData";
-        public const string DEFAULT_TAG = "latest";
+        public const string DEFAULT_VERSION_TAG = "latest";
         
         /// <summary>
         /// When running a Docker-based "Build & Push" flow, skip building the Unity server binary
@@ -78,7 +78,9 @@ namespace Edgegap.Editor
         public const string CONTAINER_IMAGE_REPOSITORY_URL_TXT_ID = "ContainerImageRepositoryTxt";
         public const string CONTAINER_USERNAME_TXT_ID = "ContainerUsernameTxt";
         public const string CONTAINER_TOKEN_TXT_ID = "ContainerTokenTxt";
+        public const string CONTAINER_NEW_TAG_VERSION_TXT_ID = "ContainerNewVersionTagTxt";
         public const string CONTAINER_BUILD_AND_PUSH_BTN_ID = "ContainerBuildAndPushBtn";
+        public const string CONTAINER_BUILD_AND_PUSH_RESULT_LABEL_ID = "ContainerBuildAndPushResultLabel";
             
         public const string DEPLOYMENTS_FOLDOUT_ID = "DeploymentsFoldout";
         public const string DEPLOYMENTS_REFRESH_BTN_ID = "DeploymentsRefreshBtn";

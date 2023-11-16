@@ -23,18 +23,19 @@ namespace Edgegap.Editor.Api
 
         #region API Methods
         /// <summary>
-        /// POST to v1/app: Create an application that will regroup application versions.
+        /// POST to v1/app
+        /// - Create an application that will regroup application versions.
         /// - API Doc | https://docs.edgegap.com/api/#tag/Applications/operation/application-post 
         /// </summary>
         /// <returns>
-        /// Http info with CreateApplicationResult data model
+        /// Http info with CreateAppResult data model
         /// - Success: 200 (no result model)
         /// - Fail: 409 (app already exists), 400 (reached limit)
         /// </returns>
-        public async Task<EdgegapHttpResult<CreateApplicationResult>> CreateApp(CreateApplicationRequest request)
+        public async Task<EdgegapHttpResult<CreateAppResult>> CreateApp(CreateAppRequest request)
         {
             HttpResponseMessage response = await PostAsync("v1/app", request.ToString());
-            EdgegapHttpResult<CreateApplicationResult> result = new(response);
+            EdgegapHttpResult<CreateAppResult> result = new(response);
             
             bool isSuccess = response.StatusCode == HttpStatusCode.OK; // 200
             if (!isSuccess)
@@ -44,19 +45,19 @@ namespace Edgegap.Editor.Api
         }
         
         /// <summary>
-        /// PATCH to v1/app: Update an application version with new specifications.
+        /// PATCH to v1/app/{app_name}/version/{version_name}
+        /// - Update an *existing* application version with new specifications.
         /// - API Doc | https://docs.edgegap.com/api/#tag/Applications/operation/app-versions-patch
         /// </summary>
         /// <returns>
-        /// Http info with CreateApplicationResult data model
-        /// - Success: 200 (no result model)
-        /// - Fail: 409 (app already exists), 400 (reached limit)
+        /// Http info with UpdateAppVersionRequest data model
+        /// - Success: 200
         /// </returns>
-        public async Task<EdgegapHttpResult<CreateApplicationResult>> UpdateAppVersion(UpdateAppVersionRequest request)
+        public async Task<EdgegapHttpResult<UpsertAppVersionResult>> UpdateAppVersion(UpdateAppVersionRequest request)
         {
             string relativePath = $"v1/app/{request.AppName}/version/{request.VersionName}";
             HttpResponseMessage response = await PatchAsync(relativePath, request.ToString());
-            EdgegapHttpResult<CreateApplicationResult> result = new(response);
+            EdgegapHttpResult<UpsertAppVersionResult> result = new(response);
             
             bool isSuccess = response.StatusCode == HttpStatusCode.OK; // 200
             if (!isSuccess)
@@ -64,6 +65,63 @@ namespace Edgegap.Editor.Api
             
             return result;
         }
+
+        /// <summary>
+        /// POST to v1/app/{app_name}/version
+        /// - Create an new application version with new specifications.
+        /// - API Doc | https://docs.edgegap.com/api/#tag/Applications/operation/app-version-post
+        /// </summary>
+        /// <returns>
+        /// Http info with UpdateAppVersionRequest data model
+        /// - Success: 200 (no result model)
+        /// - Fail: 409 (app already exists), 400 (reached limit)
+        /// </returns>
+        public async Task<EdgegapHttpResult<UpsertAppVersionResult>> CreateAppVersion(CreateAppVersionRequest request)
+        {
+            string relativePath = $"v1/app/{request.AppName}/version";
+            HttpResponseMessage response = await PostAsync(relativePath, request.ToString());
+            EdgegapHttpResult<UpsertAppVersionResult> result = new(response);
+
+            bool isSuccess = response.StatusCode == HttpStatusCode.OK; // 200
+
+            if (!isSuccess)
+                return result;
+
+            return result;
+        }
         #endregion // API Methods
+        
+        
+        #region Chained API Methods
+        /// <summary>
+        /// PATCH and/or POST to v1/app/: Upsert an *existing* application version with new specifications.
+        /// - Consumes either 1 or 2 API calls: 1st tries to PATCH, then POST if PATCH fails (!exists).
+        /// - API POST Doc | https://docs.edgegap.com/api/#tag/Applications/operation/app-version-post
+        /// - API PATCH Doc | https://docs.edgegap.com/api/#tag/Applications/operation/app-versions-patch
+        /// </summary>
+        /// <returns>
+        /// Http info with UpdateAppVersionRequest data model
+        /// - Success: 200 (no result model)
+        /// - Fail: 409 (app already exists), 400 (reached limit)
+        /// </returns>
+        public async Task<EdgegapHttpResult<UpsertAppVersionResult>> UpsertAppVersion(UpdateAppVersionRequest request)
+        {
+            EdgegapHttpResult<UpsertAppVersionResult> result = await UpdateAppVersion(request);
+
+            if (result.HasErr)
+            {
+                // Try to create, instead
+                CreateAppVersionRequest createAppVersionRequest = CreateAppVersionRequest.FromUpdateRequest(request);
+                result = await CreateAppVersion(createAppVersionRequest);
+            }
+            
+            bool isSuccess = result.StatusCode == HttpStatusCode.OK; // 200
+
+            if (!isSuccess)
+                return result;
+
+            return result;
+        }
+        #endregion // Chained API Methods 
     }
 }

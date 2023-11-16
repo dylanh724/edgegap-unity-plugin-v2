@@ -64,7 +64,9 @@ namespace Edgegap.Editor
         private TextField _containerImageRepositoryInput;
         private TextField _containerUsernameInput;
         private TextField _containerTokenInput;
+        private TextField _containerNewTagVersionInput;
         private Button _containerBuildAndPushServerBtn;
+        private Label _containerBuildAndPushResultLabel;
         
         private Foldout _deploymentsFoldout;
         private Button _deploymentsRefreshBtn;
@@ -236,6 +238,7 @@ namespace Edgegap.Editor
         private void hideResultLabels()
         {
             _appCreateResultLabel.visible = false;
+            _containerBuildAndPushResultLabel.visible = false;
         }
 
         /// <summary>
@@ -249,6 +252,7 @@ namespace Edgegap.Editor
             _appNameInput.RegisterValueChangedCallback(onAppNameInputChanged);
             
             _containerUseCustomRegistryToggle.RegisterValueChangedCallback(onContainerUseCustomRegistryToggle);
+            _containerNewTagVersionInput.RegisterValueChangedCallback(onContainerNewTagVersionInputChanged);
         }
 
         /// <summary>
@@ -296,7 +300,9 @@ namespace Edgegap.Editor
             _containerImageRepositoryInput = rootVisualElement.Q<TextField>(EdgegapWindowMetadata.CONTAINER_IMAGE_REPOSITORY_URL_TXT_ID);
             _containerUsernameInput = rootVisualElement.Q<TextField>(EdgegapWindowMetadata.CONTAINER_USERNAME_TXT_ID);
             _containerTokenInput = rootVisualElement.Q<TextField>(EdgegapWindowMetadata.CONTAINER_TOKEN_TXT_ID);
+            _containerNewTagVersionInput = rootVisualElement.Q<TextField>(EdgegapWindowMetadata.CONTAINER_NEW_TAG_VERSION_TXT_ID);
             _containerBuildAndPushServerBtn = rootVisualElement.Q<Button>(EdgegapWindowMetadata.CONTAINER_BUILD_AND_PUSH_BTN_ID);
+            _containerBuildAndPushResultLabel = rootVisualElement.Q<Label>(EdgegapWindowMetadata.CONTAINER_BUILD_AND_PUSH_RESULT_LABEL_ID);
 
             _deploymentsFoldout = rootVisualElement.Q<Foldout>(EdgegapWindowMetadata.DEPLOYMENTS_FOLDOUT_ID);
             _deploymentsRefreshBtn = rootVisualElement.Q<Button>(EdgegapWindowMetadata.DEPLOYMENTS_REFRESH_BTN_ID);
@@ -353,7 +359,13 @@ namespace Edgegap.Editor
         private void onApiTokenVerifyBtnClick() => _ = verifyApiTokenGetRegistryCredsAsync();
         private void onApiTokenGetBtnClick() => getApiToken();
         private void onAppCreateBtnClick() => _ = createApplicationAsync();
-        private void onContainerBuildAndPushServerBtnClick() => _ = buildAndPushServerAsync();
+
+        private async void onContainerBuildAndPushServerBtnClick()
+        {
+            try { await buildAndPushServerAsync(); }
+            finally { _containerBuildAndPushServerBtn.SetEnabled(true); }
+        }
+        
         private void onDeploymentsRefreshBtnClick() => _ = updateServerStatusAsync();
         private void onDeploymentCreateBtnClick() => _ = startServerCallbackAsync();
         private void onDeploymentServerActionStopBtnClick() => _ = stopServerCallbackAsync();
@@ -415,6 +427,8 @@ namespace Edgegap.Editor
             
             // _containerImageTagInput.value = _containerImageTag; // TODO: Unused in V2 UI
             // _autoIncrementTagInput.value = _autoIncrementTag;  // TODO: Unused in V2 UI
+            
+            _appCreateBtn.SetEnabled(_appNameInput.value.Length > 0);
         }
 
         /// <summary>Sync form further based on API call results.</summary>
@@ -431,18 +445,20 @@ namespace Edgegap.Editor
         
 
         #region Immediate non-button changes
-        /// <summary>On change, validate -> update custom container registry suffix</summary>
+        /// <summary>
+        /// On change, validate -> update custom container registry suffix.
+        /// Toggle create app btn if 1+ char
+        /// </summary>
         /// <param name="evt"></param>
         private void onAppNameInputChanged(ChangeEvent<string> evt)
         { 
             if (!_appNameAllowedCharsRegex.IsMatch(evt.newValue))
-            {
                 _appNameInput.value = evt.previousValue; // Revert to the previous value
-                return;
-            }
+            else
+                setContainerImageRepositoryVal(); // Valid -> Update the custom container registry suffix
             
-            // Valid -> Update the custom container registry suffix
-            setContainerImageRepositoryVal();
+            // Toggle "Create" btn on 1+ char entered
+            _appCreateBtn.SetEnabled(evt.newValue.Length > 0);
         }
         
         /// <summary>
@@ -459,6 +475,9 @@ namespace Edgegap.Editor
             _isApiTokenVerified = false;
             _postAuthContainer.SetEnabled(false);
             closeDisableGroups();
+            
+            // Toggle "Verify" btn on 1+ char entered
+            _apiTokenVerifyBtn.SetEnabled(evt.newValue.Length > 0);
         }
 
         /// <summary>Unmask while typing</summary>
@@ -472,6 +491,18 @@ namespace Edgegap.Editor
         /// <summary>On toggle, enable || disable the custom registry inputs (below the Toggle).</summary>
         private void onContainerUseCustomRegistryToggle(ChangeEvent<bool> evt) =>
             _containerCustomRegistryWrapper.SetEnabled(evt.newValue);
+
+        /// <summary>On empty, we fallback to "latest", a fallback val from EdgegapWindowMetadata.cs</summary>
+        /// <param name="evt"></param>
+        private void onContainerNewTagVersionInputChanged(ChangeEvent<string> evt)
+        {
+            if (!string.IsNullOrEmpty(evt.newValue))
+                return;
+            
+            // Set fallback value -> select all for UX, since the user may not expect this
+            _containerNewTagVersionInput.value = EdgegapWindowMetadata.DEFAULT_VERSION_TAG;
+            _containerNewTagVersionInput.SelectAll();
+        }
         #endregion // Immediate non-button changes
 
         
@@ -656,7 +687,7 @@ namespace Edgegap.Editor
             bool isApiTokenVerifiedAndContainerReady = _isApiTokenVerified && _isContainerRegistryReady;
             
             _containerRegistryFoldout.SetEnabled(isApiTokenVerifiedAndContainerReady);
-            _containerRegistryFoldout.value = isApiTokenVerifiedAndContainerReady && _containerUseCustomRegistryToggle.value;
+            _containerRegistryFoldout.value = isApiTokenVerifiedAndContainerReady;
             
             _deploymentsFoldout.SetEnabled(isApiTokenVerifiedAndContainerReady);
             _deploymentsFoldout.value = isApiTokenVerifiedAndContainerReady && _containerUseCustomRegistryToggle.value;
@@ -690,24 +721,24 @@ namespace Edgegap.Editor
                 _apiTokenInput.value.Trim(),
                 EdgegapWindowMetadata.LOG_LEVEL);
 
-            CreateApplicationRequest createAppRequest = new()
-            {
-                AppName = _appNameInput.value,
-                Image = getBase64StrFromSprite(_appIconSpriteObj) ?? "",
-                IsActive = true,
-            };
+            CreateAppRequest createAppRequest = new(
+                _appNameInput.value,
+                isActive: true,
+                getBase64StrFromSprite(_appIconSpriteObj) ?? "");
             
-            EdgegapHttpResult<CreateApplicationResult> result = await appApi.CreateApp(createAppRequest);
-            onCreateApplicationResult(result);
+            EdgegapHttpResult<CreateAppResult> createAppResult = await appApi.CreateApp(createAppRequest);
+            onCreateApplicationResult(createAppResult);
         }
 
-        private void onCreateApplicationResult(EdgegapHttpResult<CreateApplicationResult> result)
+        private void onCreateApplicationResult(EdgegapHttpResult<CreateAppResult> result)
         {
             // Assert the result itself || result's create time exists
             _appCreateResultLabel.text = getFriendlyCreateAppResultStr(result);
             _isContainerRegistryReady = result.IsResultCode200 || result.IsResultCode409; // 409 == app already exists
+            
+            // Set result flags >> Shift UI to reflect new state
             _appCreateResultLabel.visible = true;
-
+            _containerRegistryFoldout.value = _isContainerRegistryReady;
             _appCreateBtn.SetEnabled(true);
             _apiTokenVerifyBtn.SetEnabled(true);
             SyncContainerEnablesToState();
@@ -721,7 +752,7 @@ namespace Edgegap.Editor
         }
         
         /// <returns>Generally "Success" || "Error: {error}" || "Warning: {error}"</returns>
-        private string getFriendlyCreateAppResultStr(EdgegapHttpResult<CreateApplicationResult> createAppResult)
+        private string getFriendlyCreateAppResultStr(EdgegapHttpResult<CreateAppResult> createAppResult)
         {
             string resultColorHex = _isContainerRegistryReady 
                 ? EdgegapWindowMetadata.SUCCESS_COLOR_HEX 
@@ -730,16 +761,14 @@ namespace Edgegap.Editor
             string resultText = "Success";
             if (!_isContainerRegistryReady)
             {
-                // Handle specific errs, else general err msg
-                if (createAppResult.IsResultCode409)
-                {
-                    // App already exists
-                    resultText = $"<b>Warning:</b> {createAppResult.Error.ErrorMessage}";
-                    resultColorHex = EdgegapWindowMetadata.WARN_COLOR_HEX;
-                    _isContainerRegistryReady = true;
-                }
-                else
-                    resultText = $"<b>Error:</b> {createAppResult.Error.ErrorMessage}";
+                // General err msg
+                resultText = $"<b>Error:</b> {createAppResult.Error.ErrorMessage}";
+            }
+            else if (createAppResult.IsResultCode409)
+            {
+                // App already exists - Still success, but just a warn
+                resultText = $"<b>Warning:</b> {createAppResult.Error.ErrorMessage}";
+                resultColorHex = EdgegapWindowMetadata.WARN_COLOR_HEX;
             }
             
             return  $"<color={resultColorHex}>{resultText}</color>";
@@ -945,6 +974,7 @@ namespace Edgegap.Editor
         {
             if (IsLogLevelDebug) Debug.Log("buildAndPushServerAsync");
             hideResultLabels();
+            _containerBuildAndPushServerBtn.SetEnabled(false);
 
             // Validate custom container registry, app name
             try
@@ -991,7 +1021,7 @@ namespace Edgegap.Editor
 
                 string registry = _containerRegistryUrlInput.value;
                 string imageName = _containerImageRepositoryInput.value;
-                string tag = EdgegapWindowMetadata.DEFAULT_TAG;
+                string tag = _containerNewTagVersionInput.value;
                 
                 // // increment tag for quicker iteration // TODO? `_autoIncrementTag` !exists in V2.
                 // if (_autoIncrementTag)
@@ -1044,29 +1074,26 @@ namespace Edgegap.Editor
 
                 // update edgegap server settings for new tag
                 ShowBuildWorkInProgress("Updating server info on Edgegap");
-                EdgegapAppApi appApi = new(_apiEnvironment, _apiTokenInput.value, EdgegapWindowMetadata.LOG_LEVEL);
-                EdgegapHttpResult<CreateApplicationResult> updateAppVersionResult = await appApi.UpdateAppVersion(new UpdateAppVersionRequest
+                EdgegapAppApi appApi = new(_apiEnvironment, _apiTokenInput.value);
+                
+                UpdateAppVersionRequest updateAppVerReq = new(_appNameInput.value)
                 {
-                    AppName = _appNameInput.value,
-                    VersionName = _appVersionName,
+                    VersionName = _containerNewTagVersionInput.value,
                     DockerImage = imageName,
-                    DockerRegistry = registry,
+                    DockerRepository = registry,
                     DockerTag = tag,
-                });
+                };
+
+                EdgegapHttpResult<UpsertAppVersionResult> updateAppVersionResult = await appApi.UpsertAppVersion(updateAppVerReq);
 
                 if (updateAppVersionResult.HasErr)
                 {
-                    onBuildPushError("Unable to update docker tag/version.");
+                    onBuildPushError($"Unable to update docker tag/version:\n{updateAppVersionResult.Error.ErrorMessage}");
                     return;
                 }
 
                 // cleanup
-                // _containerImageTag = tag; // TODO?
-                syncFormWithObjectStatic();
-                EditorUtility.ClearProgressBar();
-                SetToolUIState(ToolState.Connected);
-
-                Debug.Log("Server built and pushed successfully");
+                onBuildAndPushSuccess(tag);
             }
             catch (Exception ex)
             {
@@ -1074,6 +1101,19 @@ namespace Edgegap.Editor
                 Debug.LogError(ex);
                 onBuildPushError("Edgegap build and push failed");
             }
+        }
+
+        private void onBuildAndPushSuccess(string tag)
+        {
+            // _containerImageTag = tag; // TODO?
+            syncFormWithObjectStatic();
+            EditorUtility.ClearProgressBar();
+            SetToolUIState(ToolState.Connected);
+            
+            _containerBuildAndPushResultLabel.text = $"Success ({tag})";
+            _containerBuildAndPushResultLabel.visible = true;
+                
+            Debug.Log("Server built and pushed successfully");
         }
 
         /// <summary>(v2) Docker cmd error, detected by "ERROR" in log stream.</summary>
@@ -1099,7 +1139,7 @@ namespace Edgegap.Editor
         //     AppVersionUpdatePatchData updatePatchData = new AppVersionUpdatePatchData
         //     {
         //         DockerImage = _containerImageRepositoryInput.value, 
-        //         DockerRegistry = _containerRegistryUrlInput.value, 
+        //         DockerRepository = _containerRegistryUrlInput.value, 
         //         DockerTag = newTag,
         //     };
         //     string json = JsonConvert.SerializeObject(updatePatchData);
@@ -1315,6 +1355,7 @@ namespace Edgegap.Editor
             bool connected = toolState.CanStartDeployment();
             _containerRegistryUrlInput.SetEnabled(connected);
             _containerImageRepositoryInput.SetEnabled(connected);
+            _containerBuildAndPushServerBtn.SetEnabled(connected);
             
             // // Unused in v2 >>
             // _autoIncrementTagInput.SetEnabled(connected);

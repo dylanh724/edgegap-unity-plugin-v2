@@ -6,7 +6,7 @@ namespace Edgegap.Editor.Api.Models.Results
     /// Result model for `POST v1/app`.
     /// API Doc | https://docs.edgegap.com/api/#tag/Applications/operation/application-post
     /// </summary>
-    public class CreateApplicationResult
+    public class CreateAppResult
     {
         [JsonProperty("name")]
         public string AppName { get; set; }

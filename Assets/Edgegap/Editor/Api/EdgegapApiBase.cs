@@ -71,7 +71,16 @@ namespace Edgegap.Editor.Api
             
             // Normalize POST uri: Can't end with `/`.
             Uri uri = new Uri(_httpClient.BaseAddress, relativePath);
-            return await ExecuteRequestAsync(() => _httpClient.PostAsync(uri, stringContent));
+
+            try
+            {
+                return await ExecuteRequestAsync(() => _httpClient.PostAsync(uri, stringContent));
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"Error: {e}");
+                throw;
+            }
         }
         
         /// <summary>
@@ -98,8 +107,16 @@ namespace Edgegap.Editor.Api
             {
                 Content = stringContent,
             };
-            
-            return await ExecuteRequestAsync(() => _httpClient.SendAsync(patchRequest));
+
+            try
+            {
+                return await ExecuteRequestAsync(() => _httpClient.SendAsync(patchRequest));
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"Error: {e}");
+                throw;
+            }
         }
         
         /// <summary>
@@ -120,8 +137,16 @@ namespace Edgegap.Editor.Api
                 customQuery);
             
             if (IsLogLevelDebug) Debug.Log($"GetAsync to: `{completeRelativeUri}`");
-            
-            return await ExecuteRequestAsync(() => _httpClient.GetAsync(completeRelativeUri));
+
+            try
+            {
+                return await ExecuteRequestAsync(() => _httpClient.GetAsync(completeRelativeUri));
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"Error: {e}");
+                throw;
+            }
         }
         
         /// <summary>POST || GET</summary>

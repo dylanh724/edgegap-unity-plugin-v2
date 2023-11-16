@@ -40,19 +40,23 @@
                         </ui:VisualElement>
                         <ui:VisualElement name="ContainerCustomRegistryWrapper" style="flex-grow: 1;">
                             <ui:VisualElement name="ContainerRegistryUrlRow" class="container-row" style="flex-grow: 1; align-items: center; flex-direction: row; justify-content: flex-start; align-self: auto;">
-                                <ui:TextField name="ContainerRegistryUrlTxt" label="Registry URL" tooltip="eg: `docker.io`, `harbor.edgegap.net`" class="text-edgegap" />
+                                <ui:TextField name="ContainerRegistryUrlTxt" label="Registry URL" tooltip="eg: `registry.edgegap.com`, `docker.io`, `harbor.edgegap.net`" class="text-edgegap" />
                             </ui:VisualElement>
                             <ui:VisualElement name="ContainerRepositoryRow" class="container-row" style="flex-grow: 1; align-items: center; flex-direction: row; justify-content: flex-start; align-self: auto;">
-                                <ui:TextField name="ContainerImageRepositoryTxt" label="Repository" view-data-key="appName" tooltip="eg: edgegap-public/tutorial" class="text-edgegap" />
+                                <ui:TextField name="ContainerImageRepositoryTxt" label="Repository" view-data-key="appName" tooltip="eg: `edgegap-public/tutorial`, `mycompany-someid/mylowercaseapp-`" class="text-edgegap" />
                             </ui:VisualElement>
                             <ui:VisualElement name="ContainerUsernameRow" class="container-row" style="flex-grow: 1; align-items: center; flex-direction: row; justify-content: flex-start; align-self: auto;">
-                                <ui:TextField name="ContainerUsernameTxt" label="Username" view-data-key="appName" tooltip="Custom registry username" class="text-edgegap" />
+                                <ui:TextField name="ContainerUsernameTxt" label="Username" view-data-key="appName" tooltip="eg: `robot$mycompany-someid+client-push`" class="text-edgegap" />
                             </ui:VisualElement>
                             <ui:VisualElement name="ContainerTokenRow" class="container-row" style="flex-grow: 1; align-items: center; flex-direction: row; justify-content: flex-start; align-self: auto;">
-                                <ui:TextField name="ContainerTokenTxt" label="Token" view-data-key="appName" tooltip="Custom registry password/token" password="true" class="text-edgegap" />
+                                <ui:TextField name="ContainerTokenTxt" label="Token" view-data-key="appName" tooltip="Registry pasword/token/secret (different from top-level API Token)" password="true" class="text-edgegap" />
                             </ui:VisualElement>
                         </ui:VisualElement>
-                        <ui:Button name="ContainerBuildAndPushBtn" text="Build and Push" class="button-edgegap text-edgegap" style="margin-left: 0;" />
+                        <ui:TextField name="ContainerNewVersionTagTxt" label="New Version Tag" tooltip="eg: &quot;latest&quot; (default), &quot;v1.0.0&quot;, &quot;1.0.0&quot;" value="latest" class="text-edgegap" />
+                        <ui:VisualElement name="ContainerBuildAndPushHorizRow" style="flex-grow: 1; flex-direction: row;">
+                            <ui:Button name="ContainerBuildAndPushBtn" text="Build and Push" class="button-edgegap text-edgegap" style="margin-left: 0;" />
+                            <ui:Label tabindex="-1" text="{ContainerBuildAndPushResultLabel}" parse-escape-sequences="true" display-tooltip-when-elided="true" name="ContainerBuildAndPushResultLabel" class="text-edgegap" style="color: rgb(138, 238, 140); align-items: stretch; justify-content: flex-start; align-self: center;" />
+                        </ui:VisualElement>
                     </ui:Foldout>
                 </ui:VisualElement>
                 <ui:Foldout text="&lt;b&gt;Deployments&lt;/b&gt;" name="DeploymentsFoldout" class="text-edgegap container-row-parent">
