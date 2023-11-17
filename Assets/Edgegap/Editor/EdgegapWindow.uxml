@@ -16,14 +16,15 @@
             <ui:VisualElement name="PostAuthContainer" usage-hints="MaskContainer" style="flex-grow: 1; transition-timing-function: ease-in; transition-duration: 0.2s;">
                 <ui:Foldout text="&lt;b&gt;Application Info&lt;/b&gt;" name="ApplicationInfoFoldout" class="text-edgegap container-row-parent" style="margin-left: 0; -unity-font-style: normal;">
                     <ui:VisualElement name="ApplicationNameRow" class="container-row" style="flex-grow: 1; align-items: center; flex-direction: row; justify-content: flex-start; align-self: auto;">
-                        <ui:TextField name="ApplicationNameTxt" label="Application Name" tooltip="Arbitrary name to call your app" password="false" class="text-edgegap" />
+                        <ui:TextField name="ApplicationNameTxt" label="Application Name" tooltip="Arbitrary name to call your app" password="false" view-data-key="ApplicationNameTxt" class="text-edgegap" />
+                        <ui:Button name="AppLoadExistingBtn" text="Load Existing App" tooltip="Already have an existing application by this name?" class="button-edgegap text-edgegap bg-purple" style="min-width: 75px; -unity-font-style: bold; visibility: visible; display: flex; overflow: hidden;" />
                     </ui:VisualElement>
                     <ui:VisualElement name="ApplicationIconRow" class="container-row" style="flex-grow: 1;">
                         <ui:VisualElement name="ApplicationIconHorizGroup" class="text-edgegap" style="flex-grow: 1; flex-direction: row; align-items: center; justify-content: flex-start; align-self: stretch; width: 600px;">
-                            <uie:ObjectField label="Application Icon" type="UnityEngine.Sprite, UnityEngine.CoreModule" name="ApplicationIconSprite" tooltip="Choose a Sprite image to use as an app icon" style="align-items: center; justify-content: flex-start; align-self: center; width: 395px;" />
+                            <uie:ObjectField label="Application Icon" type="UnityEngine.Sprite, UnityEngine.CoreModule" name="ApplicationIconSprite" tooltip="Choose a Sprite image to use as an app icon" view-data-key="ApplicationIconSprite" style="align-items: center; justify-content: flex-start; align-self: center; width: 409px;" />
                             <ui:VisualElement name="SelectFileVertGroup" style="flex-grow: 0.7;">
                                 <ui:VisualElement name="SelectFileHorizGroup" style="flex-grow: 1; flex-direction: row; align-items: center;">
-                                    <ui:Label tabindex="-1" text="Limit 200kb" parse-escape-sequences="true" display-tooltip-when-elided="true" name="SelectFileSizeLimitTooltipLabel" class="text-edgegap" style="font-size: 11px; color: rgb(147, 147, 147); align-items: center;" />
+                                    <ui:Label tabindex="-1" text="Limit 200kb" parse-escape-sequences="true" display-tooltip-when-elided="true" name="SelectFileSizeLimitTooltipLabel" class="text-edgegap" style="font-size: 11px; color: rgb(147, 147, 147); -unity-text-align: upper-left;" />
                                 </ui:VisualElement>
                             </ui:VisualElement>
                         </ui:VisualElement>
@@ -35,7 +36,7 @@
                 </ui:Foldout>
                 <ui:VisualElement name="ContainerRegistryFoldoutHorizRow" class="container-row-parent" style="flex-grow: 1; flex-direction: row;">
                     <ui:Foldout text="&lt;b&gt;Container Registry&lt;/b&gt;" name="ContainerRegistryFoldout" class="text-edgegap" style="flex-grow: 1; padding-bottom: 0; padding-top: 0; padding-right: 0; padding-left: 0;">
-                        <ui:VisualElement name="ContainerUseCustomRegistryRow" class="container-row" style="flex-grow: 1; align-items: center; flex-direction: row; justify-content: flex-start; align-self: auto; padding-top: 5px; padding-bottom: 5px;">
+                        <ui:VisualElement name="ContainerUseCustomRegistryRow" view-data-key="ContainerUseCustomRegistryRow" class="container-row" style="flex-grow: 1; align-items: center; flex-direction: row; justify-content: flex-start; align-self: auto; padding-top: 5px; padding-bottom: 5px;">
                             <ui:Toggle name="ContainerUseCustomRegistryToggle" label="Use Custom Container Registry" class="text-edgegap checkmark-edgegap" style="justify-content: flex-start; align-self: center; flex-direction: row-reverse; align-items: center; padding-left: 3px;" />
                         </ui:VisualElement>
                         <ui:VisualElement name="ContainerCustomRegistryWrapper" style="flex-grow: 1;">
@@ -43,16 +44,16 @@
                                 <ui:TextField name="ContainerRegistryUrlTxt" label="Registry URL" tooltip="eg: `registry.edgegap.com`, `docker.io`, `harbor.edgegap.net`" class="text-edgegap" />
                             </ui:VisualElement>
                             <ui:VisualElement name="ContainerRepositoryRow" class="container-row" style="flex-grow: 1; align-items: center; flex-direction: row; justify-content: flex-start; align-self: auto;">
-                                <ui:TextField name="ContainerImageRepositoryTxt" label="Repository" view-data-key="appName" tooltip="eg: `edgegap-public/tutorial`, `mycompany-someid/mylowercaseapp-`" class="text-edgegap" />
+                                <ui:TextField name="ContainerImageRepositoryTxt" label="Repository" tooltip="eg: `edgegap-public/tutorial`, `mycompany-someid/mylowercaseapp-`" class="text-edgegap" />
                             </ui:VisualElement>
                             <ui:VisualElement name="ContainerUsernameRow" class="container-row" style="flex-grow: 1; align-items: center; flex-direction: row; justify-content: flex-start; align-self: auto;">
-                                <ui:TextField name="ContainerUsernameTxt" label="Username" view-data-key="appName" tooltip="eg: `robot$mycompany-someid+client-push`" class="text-edgegap" />
+                                <ui:TextField name="ContainerUsernameTxt" label="Username" tooltip="eg: `robot$mycompany-someid+client-push`" class="text-edgegap" />
                             </ui:VisualElement>
                             <ui:VisualElement name="ContainerTokenRow" class="container-row" style="flex-grow: 1; align-items: center; flex-direction: row; justify-content: flex-start; align-self: auto;">
-                                <ui:TextField name="ContainerTokenTxt" label="Token" view-data-key="appName" tooltip="Registry pasword/token/secret (different from top-level API Token)" password="true" class="text-edgegap" />
+                                <ui:TextField name="ContainerTokenTxt" label="Token" tooltip="Registry pasword/token/secret (different from top-level API Token)" password="true" class="text-edgegap" />
                             </ui:VisualElement>
                         </ui:VisualElement>
-                        <ui:TextField name="ContainerNewVersionTagTxt" label="New Version Tag" tooltip="eg: &quot;latest&quot; (default), &quot;v1.0.0&quot;, &quot;1.0.0&quot;" value="latest" class="text-edgegap" />
+                        <ui:TextField name="ContainerNewVersionTagTxt" label="New Version Tag" tooltip="eg: &quot;latest&quot; (default), &quot;v1.0.0&quot;, &quot;1.0.0&quot;" value="latest" view-data-key="ContainerNewVersionTagTxt" class="text-edgegap" />
                         <ui:VisualElement name="ContainerBuildAndPushHorizRow" style="flex-grow: 1; flex-direction: row;">
                             <ui:Button name="ContainerBuildAndPushBtn" text="Build and Push" class="button-edgegap text-edgegap" style="margin-left: 0;" />
                             <ui:Label tabindex="-1" text="{ContainerBuildAndPushResultLabel}" parse-escape-sequences="true" display-tooltip-when-elided="true" name="ContainerBuildAndPushResultLabel" class="text-edgegap" style="color: rgb(138, 238, 140); align-items: stretch; justify-content: flex-start; align-self: center;" />

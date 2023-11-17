@@ -66,12 +66,11 @@ namespace Edgegap.Editor.Api
         protected async Task<HttpResponseMessage> PostAsync(string relativePath = "", string json = "{}")
         {
             StringContent stringContent = CreateStringContent(json);
-            if (IsLogLevelDebug)
-                Debug.Log($"PostAsync to: `{_httpClient.BaseAddress}/{relativePath}` with json: `{json}`");
-            
-            // Normalize POST uri: Can't end with `/`.
-            Uri uri = new Uri(_httpClient.BaseAddress, relativePath);
+            Uri uri = new Uri(_httpClient.BaseAddress, relativePath); // Normalize POST uri: Can't end with `/`.
 
+            if (IsLogLevelDebug)
+                Debug.Log($"PostAsync to: `{uri}` with json: `{json}`");
+            
             try
             {
                 return await ExecuteRequestAsync(() => _httpClient.PostAsync(uri, stringContent));
@@ -95,11 +94,10 @@ namespace Edgegap.Editor.Api
         protected async Task<HttpResponseMessage> PatchAsync(string relativePath = "", string json = "{}")
         {
             StringContent stringContent = CreateStringContent(json);
-            if (IsLogLevelDebug)
-                Debug.Log($"PatchAsync to: `{_httpClient.BaseAddress}/{relativePath}` with json: `{json}`");
+            Uri uri = new Uri(_httpClient.BaseAddress, relativePath); // Normalize PATCH uri: Can't end with `/`.
             
-            // Normalize PATCH uri: Can't end with `/`.
-            Uri uri = new Uri(_httpClient.BaseAddress, relativePath);
+            if (IsLogLevelDebug)
+                Debug.Log($"PatchAsync to: `{uri}` with json: `{json}`");
             
             // (!) As of 11/15/2023, .PatchAsync() is "unsupported by Unity" -- so we manually set the verb and SendAsync()
             // Create the request manually
@@ -136,7 +134,8 @@ namespace Edgegap.Editor.Api
                 relativePath,
                 customQuery);
             
-            if (IsLogLevelDebug) Debug.Log($"GetAsync to: `{completeRelativeUri}`");
+            if (IsLogLevelDebug) 
+                Debug.Log($"GetAsync to: `{completeRelativeUri} with customQuery: `{customQuery}`");
 
             try
             {

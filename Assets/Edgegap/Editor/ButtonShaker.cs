@@ -17,7 +17,7 @@ namespace Edgegap.Editor
         /// 1 shake = 1 bigger -> followed by 1 smaller.</summary>
         /// <param name="msDelayBetweenShakes"></param>
         /// <param name="iterations"># of shakes</param>
-        public async Task ApplyShake(int msDelayBetweenShakes = 40, int iterations = 2)
+        public async Task ApplyShakeAsync(int msDelayBetweenShakes = 40, int iterations = 2)
         {
             for (int i = 0; i < iterations; i++)
                 await shakeOnce(msDelayBetweenShakes);

@@ -3,10 +3,11 @@ using Newtonsoft.Json;
 namespace Edgegap.Editor.Api.Models.Results
 {
     /// <summary>
-    /// Result model for `POST v1/app`.
-    /// API Doc | https://docs.edgegap.com/api/#tag/Applications/operation/application-post
+    /// Result model for `[GET | POST] v1/app`.
+    /// POST API Doc | https://docs.edgegap.com/api/#tag/Applications/operation/application-post
+    /// GET API Doc | https://docs.edgegap.com/api/#tag/Applications/operation/application-get
     /// </summary>
-    public class CreateAppResult
+    public class GetCreateAppResult
     {
         [JsonProperty("name")]
         public string AppName { get; set; }

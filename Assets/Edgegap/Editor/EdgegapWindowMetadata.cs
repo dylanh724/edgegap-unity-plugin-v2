@@ -16,7 +16,7 @@ namespace Edgegap.Editor
         }
 
         /// <summary>Set to Debug to show more logs. Default `Error`. TODO: Move opt to UI?</summary>
-        public const LogLevel LOG_LEVEL = LogLevel.Debug;
+        public const LogLevel LOG_LEVEL = LogLevel.Error;
         
         /// <summary>
         /// Set to show a debug button at the top-right for arbitrary testing.
@@ -45,14 +45,56 @@ namespace Edgegap.Editor
         /// </summary>
         public const bool SKIP_DOCKER_IMAGE_BUILD_WHEN_PUSHING = true;
         
+        public const string LOADING_RICH_STR = "<i>Loading...</i>";
+        public const string PROCESSING_RICH_STR = "<i>Processing...</i>";
+        
+        
+        #region Colors
         /// <summary>Earthy lime green</summary>
         public const string SUCCESS_COLOR_HEX = "#8AEE8C";
         
         /// <summary>Calming light orange</summary>
         public const string WARN_COLOR_HEX = "#EEC58A";
         
-        /// <summary>Vivid blood orange </summary>
+        /// <summary>Vivid blood orange</summary>
         public const string FAIL_COLOR_HEX = "#EE9A8A";
+
+        /// <summary>Corn yellow</summary>
+        public const string PROCESSING_COLOR_HEX = "#EEEA8A";
+
+        public enum StatusColors
+        {
+            /// <summary>CornYellow</summary>
+            Processing,
+            
+            /// <summary>EarthyLimeGreen</summary>
+            Success,
+            
+            /// <summary>CalmingLightOrange</summary>
+            Warn,
+                
+            /// <summary>VividBloodOrange</summary>
+            Error,
+        }
+        
+        /// <returns>Wraps string in color rich text</returns>
+        public static string WrapRichTextInColor(string str, StatusColors statusColor)
+        {
+            switch (statusColor)
+            {
+                case StatusColors.Processing:
+                    return $"<color={PROCESSING_COLOR_HEX}>{str}</color>";
+                case StatusColors.Success:
+                    return $"<color={SUCCESS_COLOR_HEX}>{str}</color>";
+                case StatusColors.Warn:
+                    return $"<color={WARN_COLOR_HEX}>{str}</color>";
+                case StatusColors.Error:
+                    return $"<color={FAIL_COLOR_HEX}>{str}</color>";
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(statusColor), statusColor, null);
+            }
+        }
+        #endregion // Colors
         
         #region Player Pref Key Ids for persistence
         /// <summary>Cached as base64</summary>
@@ -67,6 +109,7 @@ namespace Edgegap.Editor
             
         public const string APP_INFO_FOLDOUT_ID = "ApplicationInfoFoldout";
         public const string APP_NAME_TXT_ID = "ApplicationNameTxt";
+        public const string APP_LOAD_EXISTING_BTN_ID = "AppLoadExistingBtn";
         public const string APP_ICON_SPRITE_OBJ_ID = "ApplicationIconSprite";
         public const string APP_CREATE_BTN_ID = "ApplicationCreateBtn";
         public const string APP_CREATE_RESULT_LABEL_ID = "ApplicationCreateResultLabel";

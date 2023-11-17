@@ -28,14 +28,35 @@ namespace Edgegap.Editor.Api
         /// - API Doc | https://docs.edgegap.com/api/#tag/Applications/operation/application-post 
         /// </summary>
         /// <returns>
-        /// Http info with CreateAppResult data model
-        /// - Success: 200 (no result model)
+        /// Http info with GetCreateAppResult data model
+        /// - Success: 200
         /// - Fail: 409 (app already exists), 400 (reached limit)
         /// </returns>
-        public async Task<EdgegapHttpResult<CreateAppResult>> CreateApp(CreateAppRequest request)
+        public async Task<EdgegapHttpResult<GetCreateAppResult>> CreateApp(CreateAppRequest request)
         {
             HttpResponseMessage response = await PostAsync("v1/app", request.ToString());
-            EdgegapHttpResult<CreateAppResult> result = new(response);
+            EdgegapHttpResult<GetCreateAppResult> result = new(response);
+            
+            bool isSuccess = response.StatusCode == HttpStatusCode.OK; // 200
+            if (!isSuccess)
+                return result;
+            
+            return result;
+        }
+        
+        /// <summary>
+        /// GET to v1/app
+        /// - Get an application that will regroup application versions.
+        /// - API Doc | https://docs.edgegap.com/api/#tag/Applications/operation/application-post 
+        /// </summary>
+        /// <returns>
+        /// Http info with GetCreateAppResult data model
+        /// - Success: 200
+        /// </returns>
+        public async Task<EdgegapHttpResult<GetCreateAppResult>> GetApp(string appName)
+        {
+            HttpResponseMessage response = await GetAsync($"v1/app/{appName}");
+            EdgegapHttpResult<GetCreateAppResult> result = new(response);
             
             bool isSuccess = response.StatusCode == HttpStatusCode.OK; // 200
             if (!isSuccess)

@@ -17,6 +17,9 @@ namespace Edgegap.Editor.Api.Models.Results
         /// <summary>This could be err, success, or null.</summary>
         public string Json { get; }
         
+        /// <summary>eg: "POST"</summary>
+        public HttpMethod HttpMethod;
+        
         /// <summary>
         /// Typically is sent by servers together with the status code.
         /// Useful for fallback err descriptions, often based on the status code.
@@ -64,6 +67,8 @@ namespace Edgegap.Editor.Api.Models.Results
         public EdgegapHttpResult(HttpResponseMessage httpResponse, bool isLogLevelDebug = false) 
             : base(httpResponse)
         {
+            this.HttpMethod = httpResponse.RequestMessage.Method;
+            
             // Assuming JSON content and using Newtonsoft.Json for deserialization
             bool isDeserializable = httpResponse.Content != null &&
                 httpResponse.Content.Headers.ContentType.MediaType == "application/json";
