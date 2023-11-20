@@ -190,8 +190,8 @@ namespace Edgegap.Editor.Api
             if (!response.IsSuccessStatusCode)
             {
                 HttpMethod httpMethod = response.RequestMessage.Method;
-                Debug.Log($"!Success: {httpMethod} {(short)response.StatusCode} - " +
-                    $"{response.ReasonPhrase} - `{response.RequestMessage.RequestUri}` - " +
+                Debug.Log($"!Success: {(short)response.StatusCode} {response.ReasonPhrase} - " +
+                    $"{httpMethod} | {response.RequestMessage.RequestUri}` - " +
                     $"{response.Content?.ReadAsStringAsync().Result}");
             }
     
