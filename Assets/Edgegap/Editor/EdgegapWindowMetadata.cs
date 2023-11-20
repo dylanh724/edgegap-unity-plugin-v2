@@ -4,7 +4,12 @@ namespace Edgegap.Editor
 {
     /// <summary>
     /// Contains static metadata / options for the EdgegapWindowV2 UI.
-    /// - Notable: SHOW_DEBUG_BTN, LOG_LEVEL, DEFAULT_VERSION_TAG, SKIP_SERVER_BUILD_WHEN_PUSHING, SKIP_DOCKER_IMAGE_BUILD_WHEN_PUSHING
+    /// - Notable:
+    ///   * SHOW_DEBUG_BTN
+    ///   * LOG_LEVEL
+    ///   * DEFAULT_VERSION_TAG
+    ///   * SKIP_SERVER_BUILD_WHEN_PUSHING
+    ///   * SKIP_DOCKER_IMAGE_BUILD_WHEN_PUSHING
     /// </summary>
     public static class EdgegapWindowMetadata
     {
@@ -37,13 +42,13 @@ namespace Edgegap.Editor
         /// When running a Docker-based "Build & Push" flow, skip building the Unity server binary
         /// (great for testing push flow). Default false.
         /// </summary>
-        public const bool SKIP_SERVER_BUILD_WHEN_PUSHING = true;
+        public const bool SKIP_SERVER_BUILD_WHEN_PUSHING = false;
         
         /// <summary>
         /// When running a Docker-based "Build & Push" flow, skip building the Docker image
         /// (great for testing registry login mechanics). Default false.
         /// </summary>
-        public const bool SKIP_DOCKER_IMAGE_BUILD_WHEN_PUSHING = true;
+        public const bool SKIP_DOCKER_IMAGE_BUILD_WHEN_PUSHING = false;
         
         public const string LOADING_RICH_STR = "<i>Loading...</i>";
         public const string PROCESSING_RICH_STR = "<i>Processing...</i>";
