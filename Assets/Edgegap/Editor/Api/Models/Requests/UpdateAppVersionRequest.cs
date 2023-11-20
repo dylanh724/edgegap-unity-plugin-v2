@@ -5,6 +5,7 @@ namespace Edgegap.Editor.Api.Models.Requests
     /// <summary>
     /// Request model for `PATCH v1/app/{app_name}/version/{version_name}`.
     /// Request model for https://docs.edgegap.com/api/#tag/Applications/operation/app-versions-patch
+    /// TODO: Split "Create" and "Update" into their own, separate models: CTRL+F for "(!)" for more info.
     /// </summary>
     public class UpdateAppVersionRequest
     {
@@ -44,14 +45,16 @@ namespace Edgegap.Editor.Api.Models.Requests
         [JsonProperty("private_token")]
         public string PrivateToken { get; set; } = "";
        
-        [JsonProperty("req_cpu")]
-        public int ReqCpu { get; set; } = 256;
-       
-        [JsonProperty("req_memory")]
-        public int ReqMemory { get; set; } = 256;
-       
-        [JsonProperty("req_video")]
-        public int ReqVideo { get; set; } = 256;
+        #region (!) Shows in API docs for PATCH, but could be CREATE only? "Unknown Args"
+        // [JsonProperty("req_cpu")]
+        // public int ReqCpu { get; set; } = 256;
+        //
+        // [JsonProperty("req_memory")]
+        // public int ReqMemory { get; set; } = 256;
+        //
+        // [JsonProperty("req_video")]
+        // public int ReqVideo { get; set; } = 256;
+        #endregion // (!) Shows in API docs for PATCH, but could be CREATE only? "Unknown Args"
        
         [JsonProperty("max_duration")]
         public int MaxDuration { get; set; } = 30;
@@ -83,8 +86,9 @@ namespace Edgegap.Editor.Api.Models.Requests
         [JsonProperty("termination_grace_period_seconds")]
         public int TerminationGracePeriodSeconds { get; set; } = 5;
        
-        [JsonProperty("endpoint_storage")]
-        public string EndpointStorage { get; set; } = "";
+        // // (!) BUG: Expects empty string "" at minimum; however, empty string will throw server err
+        // [JsonProperty("endpoint_storage")]
+        // public string EndpointStorage { get; set; }
        
         [JsonProperty("command")]
         public string Command { get; set; }
