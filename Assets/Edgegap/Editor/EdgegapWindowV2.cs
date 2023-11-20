@@ -1361,11 +1361,11 @@ namespace Edgegap.Editor
         /// <summary>(v2) Docker cmd error, detected by "ERROR" in log stream.</summary>
         private void onBuildPushError(string msg)
         {
-            EditorUtility.DisplayDialog("Error", msg, "Ok");
             SetToolUIState(ToolState.Connected);
             EditorUtility.ClearProgressBar();
             _containerBuildAndPushResultLabel.text = EdgegapWindowMetadata.WrapRichTextInColor(
                 "Error", EdgegapWindowMetadata.StatusColors.Error);
+            EditorUtility.DisplayDialog("Error", msg, "Ok"); // Show this last! It's blocking!
         }
         
         // [Obsolete("Use EdgegapAppApi.UpdateAppVersion")]
