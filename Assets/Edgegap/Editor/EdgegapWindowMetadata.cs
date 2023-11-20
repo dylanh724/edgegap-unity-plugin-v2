@@ -20,7 +20,11 @@ namespace Edgegap.Editor
             Error,
         }
 
-        /// <summary>Set to Debug to show more logs. Default `Error`. TODO: Move opt to UI?</summary>
+        /// <summary>
+        /// Set to Debug to show more logs. Default `Error`.
+        /// - Error level includes "potentially-intentional" (!fatal) errors logged with Debug.Log
+        /// - TODO: Move opt to UI?
+        /// </summary>
         public const LogLevel LOG_LEVEL = LogLevel.Error;
         
         /// <summary>
