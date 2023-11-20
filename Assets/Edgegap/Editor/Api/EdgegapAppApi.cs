@@ -127,13 +127,13 @@ namespace Edgegap.Editor.Api
         /// </returns>
         public async Task<EdgegapHttpResult<UpsertAppVersionResult>> UpsertAppVersion(UpdateAppVersionRequest request)
         {
-            EdgegapHttpResult<UpsertAppVersionResult> result = await UpdateAppVersion(request);
+            EdgegapHttpResult<UpsertAppVersionResult> result = await UpdateAppVersion(request); // PATCH
 
             if (result.HasErr)
             {
                 // Try to create, instead
                 CreateAppVersionRequest createAppVersionRequest = CreateAppVersionRequest.FromUpdateRequest(request);
-                result = await CreateAppVersion(createAppVersionRequest);
+                result = await CreateAppVersion(createAppVersionRequest); // POST
             }
             
             bool isSuccess = result.StatusCode == HttpStatusCode.OK; // 200
