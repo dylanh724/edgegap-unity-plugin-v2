@@ -29,7 +29,18 @@ namespace Edgegap
                 locationPathName = "Builds/EdgegapServer/ServerBuild"
             };
 
-            return BuildPipeline.BuildPlayer(options);
+            BuildReport buildReport = null;
+            try
+            {
+                buildReport = BuildPipeline.BuildPlayer(options);
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"Error: {e}");
+                throw;
+            }
+
+            return buildReport;
         }
 
         public static async Task<bool> DockerSetupAndInstalationCheck()

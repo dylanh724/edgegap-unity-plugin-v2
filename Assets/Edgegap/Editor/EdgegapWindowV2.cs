@@ -1331,7 +1331,17 @@ namespace Edgegap.Editor
             {
                 EditorUtility.ClearProgressBar();
                 Debug.LogError(ex);
-                onBuildPushError("Edgegap build and push failed");
+
+                string errMsg = "Edgegapbuild and push failed";
+                if (ex.Message.Contains("docker daemon is not running"))
+                {
+                    errMsg += ":\nDocker is installed, but the daemon/app (such as `Docker Desktop`) is not running. " +
+                        "Please start Docker Desktop and try again.";
+                }
+                else
+                    errMsg += $":\n{ex.Message}";
+                
+                onBuildPushError(errMsg);
             }
         }
 
@@ -1354,6 +1364,8 @@ namespace Edgegap.Editor
             EditorUtility.DisplayDialog("Error", msg, "Ok");
             SetToolUIState(ToolState.Connected);
             EditorUtility.ClearProgressBar();
+            _containerBuildAndPushResultLabel.text = EdgegapWindowMetadata.WrapRichTextInColor(
+                "Error", EdgegapWindowMetadata.StatusColors.Error);
         }
         
         // [Obsolete("Use EdgegapAppApi.UpdateAppVersion")]
