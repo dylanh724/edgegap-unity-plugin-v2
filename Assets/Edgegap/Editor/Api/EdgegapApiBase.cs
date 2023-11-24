@@ -55,7 +55,7 @@ namespace Edgegap.Editor.Api
         
         #region HTTP Requests
         /// <summary>
-        /// POST: We already added "https://api.edgegap.com/" (or similar) BaseAddress via constructor.
+        /// POST | We already added "https://api.edgegap.com/" (or similar) BaseAddress via constructor.
         /// </summary>
         /// <param name="relativePath"></param>
         /// <param name="json">Serialize to your model via Newtonsoft</param>
@@ -83,7 +83,7 @@ namespace Edgegap.Editor.Api
         }
         
         /// <summary>
-        /// PATCH: We already added "https://api.edgegap.com/" (or similar) BaseAddress via constructor.
+        /// PATCH | We already added "https://api.edgegap.com/" (or similar) BaseAddress via constructor.
         /// </summary>
         /// <param name="relativePath"></param>
         /// <param name="json">Serialize to your model via Newtonsoft</param>
@@ -118,7 +118,7 @@ namespace Edgegap.Editor.Api
         }
         
         /// <summary>
-        /// We already added "https://api.edgegap.com/" (or similar) BaseAddress via constructor.
+        /// GET | We already added "https://api.edgegap.com/" (or similar) BaseAddress via constructor.
         /// </summary>
         /// <param name="relativePath"></param>
         /// <param name="customQuery">
@@ -140,6 +140,37 @@ namespace Edgegap.Editor.Api
             try
             {
                 return await ExecuteRequestAsync(() => _httpClient.GetAsync(completeRelativeUri));
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"Error: {e}");
+                throw;
+            }
+        }
+        
+        /// <summary>
+        /// DELETE | We already added "https://api.edgegap.com/" (or similar) BaseAddress via constructor.
+        /// </summary>
+        /// <param name="relativePath"></param>
+        /// <param name="customQuery">
+        /// To append to the URL; eg: "foo=0&bar=1"
+        /// (!) First query key should prefix nothing, as shown</param>
+        /// <returns>
+        /// - Success => returns HttpResponseMessage result
+        /// - Error => Catches errs => returns null (no rethrow)
+        /// </returns>
+        protected async Task<HttpResponseMessage> DeleteAsync(string relativePath = "", string customQuery = "")
+        {
+            string completeRelativeUri = prepareEdgegapUriWithQuery(
+                relativePath,
+                customQuery);
+            
+            if (IsLogLevelDebug) 
+                Debug.Log($"DeleteAsync to: `{completeRelativeUri} with customQuery: `{customQuery}`");
+
+            try
+            {
+                return await ExecuteRequestAsync(() => _httpClient.DeleteAsync(completeRelativeUri));
             }
             catch (Exception e)
             {

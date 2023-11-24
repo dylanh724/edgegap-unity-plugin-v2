@@ -26,7 +26,7 @@ namespace Edgegap
             row.Add(new Label("Name"));
             row.Add(new Label("External"));
             row.Add(new Label("Internal"));
-            row.Add(new Label("Protocol"));
+            row.Add(new Label("ProtocolStr"));
             row.Add(new Label("Link"));
 
             return row;

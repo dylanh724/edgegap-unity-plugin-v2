@@ -6,7 +6,7 @@ namespace Edgegap.Editor.Api.Models.Requests
 {
     /// <summary>
     /// Request model for `POST v1/app/{app_name}/version`.
-    /// Request model for https://docs.edgegap.com/api/#tag/Applications/operation/app-version-post
+    /// API Doc | https://docs.edgegap.com/api/#tag/Applications/operation/app-version-post
     /// </summary>
     public class CreateAppVersionRequest
     {
@@ -41,143 +41,152 @@ namespace Edgegap.Editor.Api.Models.Requests
         /// <summary>*Units of memory in MB needed (1024 = 1 GPU)</summary>
         [JsonProperty("req_memory")]
         public int ReqMemory { get; set; } = 256;
+
+        /// <summary>*Required: At least 1 { Port, ProtocolStr }.</summary>
+        [JsonProperty("ports")]
+        public PortsData[] Ports { get; set; } = {};
+        
+        /// <summary>The username to access the docker repository</summary>
+        [JsonProperty("private_username")]
+        public string PrivateUsername { get; set; } = "";
+        
+        /// <summary>The Private Password or Token of the username (We recommend to use a token)</summary>
+        [JsonProperty("private_token")]
+        public string PrivateToken { get; set; } = "";
         #endregion // Required
         
         
-           // #region Optional
-           // [JsonProperty("is_active")]
-           // public bool IsActive { get; set; } = true;
-           //
-           // [JsonProperty("private_username")]
-           // public string PrivateUsername { get; set; } = "";
-           //
-           // [JsonProperty("private_token")]
-           // public string PrivateToken { get; set; } = "";
-           //
-           // [JsonProperty("req_video")]
-           // public int ReqVideo { get; set; } = 256;
-           //
-           // [JsonProperty("max_duration")]
-           // public int MaxDuration { get; set; } = 30;
-           //
-           // [JsonProperty("use_telemetry")]
-           // public bool UseTelemetry { get; set; } = true;
-           //
-           // [JsonProperty("inject_context_env")]
-           // public bool InjectContextEnv { get; set; } = true;
-           //
-           // [JsonProperty("whitelisting_active")]
-           // public bool WhitelistingActive { get; set; } = true;
-           //
-           // [JsonProperty("force_cache")]
-           // public bool ForceCache { get; set; }
-           //
-           // [JsonProperty("cache_min_hour")]
-           // public int CacheMinHour { get; set; }
-           //
-           // [JsonProperty("cache_max_hour")]
-           // public int CacheMaxHour { get; set; }
-           //
-           // [JsonProperty("time_to_deploy")]
-           // public int TimeToDeploy { get; set; } = 15;
-           //
-           // [JsonProperty("enable_all_locations")]
-           // public bool EnableAllLocations { get; set; }
-           //
-           // [JsonProperty("termination_grace_period_seconds")]
-           // public int TerminationGracePeriodSeconds { get; set; } = 5;
-           //
-           // [JsonProperty("endpoint_storage")]
-           // public string EndpointStorage { get; set; } = "";
-           //
-           // [JsonProperty("command")]
-           // public string Command { get; set; }
-           //
-           // [JsonProperty("arguments")]
-           // public string Arguments { get; set; }
-           //
-           // [JsonProperty("verify_image")]
-           // public bool VerifyImage { get; set; }
-           //
-           // [JsonProperty("session_config")]
-           // public SessionConfigData SessionConfig { get; set; } = new();
-           //
-           // [JsonProperty("ports")]
-           // public PortsData[] Ports { get; set; } = {};
-           //
-           // [JsonProperty("probe")]
-           // public ProbeData Probe { get; set; } = new();
-           //
-           // [JsonProperty("envs")]
-           // public EnvsData[] Envs { get; set; } = {};
-           //
-           // public class SessionConfigData
-           // {
-           //     [JsonProperty("kind")]
-           //     public string Kind { get; set; } = "Seat";
-           //
-           //     [JsonProperty("sockets")]
-           //     public int Sockets { get; set; } = 10;
-           //
-           //     [JsonProperty("autodeploy")]
-           //     public bool Autodeploy { get; set; } = true;
-           //
-           //     [JsonProperty("empty_ttl")]
-           //     public int EmptyTtl { get; set; } = 60;
-           //
-           //     [JsonProperty("session_max_duration")]
-           //     public int SessionMaxDuration { get; set; } = 60;
-           // }
-           //
-           // public class PortsData
-           // {
-           //     [JsonProperty("port")]
-           //     public int Port { get; set; } = 5555;
-           //
-           //     [JsonProperty("protocol")]
-           //     public string Protocol { get; set; } = "TCP";
-           //
-           //     [JsonProperty("to_check")]
-           //     public bool ToCheck { get; set; } = true;
-           //
-           //     [JsonProperty("tls_upgrade")]
-           //     public bool TlsUpgrade { get; set; } = false;
-           //
-           //     [JsonProperty("name")]
-           //     public string PortName { get; set; } = "Game Port";
-           // }
-           //
-           // public class ProbeData
-           // {
-           //     [JsonProperty("optimal_ping")]
-           //     public int OptimalPing { get; set; } = 60;
-           //
-           //     [JsonProperty("rejected_ping")]
-           //     public int RejectedPing { get; set; } = 180;
-           // }
-           //
-           // public class EnvsData
-           // {
-           //     [JsonProperty("key")]
-           //     public string Key { get; set; }
-           //
-           //     [JsonProperty("value")]
-           //     public string Value { get; set; }
-           //
-           //     [JsonProperty("is_secret")]
-           //     public bool IsSecret { get; set; } = true;
-           // }
-           // #endregion // Optional
+        // #region Optional
+        // [JsonProperty("is_active")]
+        // public bool IsActive { get; set; } = true;
+        //
+        // [JsonProperty("req_video")]
+        // public int ReqVideo { get; set; } = 256;
+        //
+        // [JsonProperty("max_duration")]
+        // public int MaxDuration { get; set; } = 30;
+        //
+        // [JsonProperty("use_telemetry")]
+        // public bool UseTelemetry { get; set; } = true;
+        //
+        // [JsonProperty("inject_context_env")]
+        // public bool InjectContextEnv { get; set; } = true;
+        //
+        // [JsonProperty("whitelisting_active")]
+        // public bool WhitelistingActive { get; set; } = true;
+        //
+        // [JsonProperty("force_cache")]
+        // public bool ForceCache { get; set; }
+        //
+        // [JsonProperty("cache_min_hour")]
+        // public int CacheMinHour { get; set; }
+        //
+        // [JsonProperty("cache_max_hour")]
+        // public int CacheMaxHour { get; set; }
+        //
+        // [JsonProperty("time_to_deploy")]
+        // public int TimeToDeploy { get; set; } = 15;
+        //
+        // [JsonProperty("enable_all_locations")]
+        // public bool EnableAllLocations { get; set; }
+        //
+        // [JsonProperty("termination_grace_period_seconds")]
+        // public int TerminationGracePeriodSeconds { get; set; } = 5;
+        //
+        // [JsonProperty("endpoint_storage")]
+        // public string EndpointStorage { get; set; } = "";
+        //
+        // [JsonProperty("command")]
+        // public string Command { get; set; }
+        //
+        // [JsonProperty("arguments")]
+        // public string Arguments { get; set; }
+        //
+        // [JsonProperty("verify_image")]
+        // public bool VerifyImage { get; set; }
+        //
+        // [JsonProperty("session_config")]
+        // public SessionConfigData SessionConfig { get; set; } = new();
+        //
+        // [JsonProperty("probe")]
+        // public ProbeData Probe { get; set; } = new();
+        //
+        // [JsonProperty("envs")]
+        // public EnvsData[] Envs { get; set; } = {};
+        //
+        // public class SessionConfigData
+        // {
+        //     [JsonProperty("kind")]
+        //     public string Kind { get; set; } = "Seat";
+        //
+        //     [JsonProperty("sockets")]
+        //     public int Sockets { get; set; } = 10;
+        //
+        //     [JsonProperty("autodeploy")]
+        //     public bool Autodeploy { get; set; } = true;
+        //
+        //     [JsonProperty("empty_ttl")]
+        //     public int EmptyTtl { get; set; } = 60;
+        //
+        //     [JsonProperty("session_max_duration")]
+        //     public int SessionMaxDuration { get; set; } = 60;
+        // }
+        //
+        //
+        // public class ProbeData
+        // {
+        //     [JsonProperty("optimal_ping")]
+        //     public int OptimalPing { get; set; } = 60;
+        //
+        //     [JsonProperty("rejected_ping")]
+        //     public int RejectedPing { get; set; } = 180;
+        // }
+        //
+        // public class EnvsData
+        // {
+        //     [JsonProperty("key")]
+        //     public string Key { get; set; }
+        //
+        //     [JsonProperty("value")]
+        //     public string Value { get; set; }
+        //
+        //     [JsonProperty("is_secret")]
+        //     public bool IsSecret { get; set; } = true;
+        // }
+        // #endregion // Optional
 
         /// <summary>Used by Newtonsoft</summary>
         public CreateAppVersionRequest()
         {
         }
         
-        /// <summary>Init with required info. Default version/tag == "latest".</summary>
-        public CreateAppVersionRequest(string appName)
+        /// <summary>
+        /// Init with required info.
+        /// (!) If looking for refs, also see FromUpdateRequest() builder below.
+        /// </summary>
+        /// <param name="appName">The name of the application.</param>
+        /// <param name="containerRegistryUsername"></param>
+        /// <param name="containerRegistryPasswordToken"></param>
+        /// <param name="portNum"></param>
+        /// <param name="protocolType"></param>
+        public CreateAppVersionRequest(
+            string appName,
+            string containerRegistryUsername,
+            string containerRegistryPasswordToken,
+            int portNum,
+            ProtocolType protocolType)
         {
             this.AppName = appName;
+            this.PrivateUsername = containerRegistryUsername;
+            this.PrivateToken = containerRegistryPasswordToken;
+            this.Ports = new PortsData[]
+            {
+                new()
+                {
+                    Port = portNum,
+                    ProtocolStr = protocolType.ToString(),
+                },
+            };
         }
 
         /// <summary>
@@ -197,6 +206,8 @@ namespace Edgegap.Editor.Api.Models.Requests
                 createReq = JsonConvert.DeserializeObject<CreateAppVersionRequest>(json);
                 createReq.AppName = updateRequest.AppName; // Normally JsonIgnored in Update
                 createReq.VersionName = updateRequest.VersionName; // Normally JsonIgnored in Update
+                createReq.PrivateUsername = updateRequest.PrivateUsername;
+                createReq.PrivateToken = updateRequest.PrivateToken;
             }
             catch (Exception e)
             {

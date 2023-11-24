@@ -10,17 +10,21 @@ namespace Edgegap.Editor.Api.Models.Requests
     public class UpdateAppVersionRequest
     {
         #region Required
-        /// <summary>*The name of the application.</summary>
+        /// <summary>*Required: The name of the application.</summary>
         [JsonIgnore] // *Path var
         public string AppName { get; set; }
-
-        /// <summary>The name of the application version.</summary>
-        [JsonIgnore] // *Path var
-        public string VersionName { get; set; } = EdgegapWindowMetadata.DEFAULT_VERSION_TAG;
         #endregion // Required
         
         
-       #region Optional
+        #region Optional
+        /// <summary>The name of the application version.</summary>
+        [JsonIgnore] // *Path var
+        public string VersionName { get; set; } = EdgegapWindowMetadata.DEFAULT_VERSION_TAG;
+        
+        /// <summary>At least 1 { Port, ProtocolStr }</summary>
+        [JsonProperty("ports")]
+        public PortsData[] Ports { get; set; } = {};
+        
         /// <summary>The Repository where the image is.</summary>
         /// <example>"registry.edgegap.com" || "harbor.edgegap.com" || "docker.io"</example>
         [JsonProperty("docker_repository")]
@@ -99,9 +103,6 @@ namespace Edgegap.Editor.Api.Models.Requests
         [JsonProperty("session_config")]
         public SessionConfigData SessionConfig { get; set; } = new();
        
-        [JsonProperty("ports")]
-        public PortsData[] Ports { get; set; } = {};
-       
         [JsonProperty("probe")]
         public ProbeData Probe { get; set; } = new();
        
@@ -125,25 +126,7 @@ namespace Edgegap.Editor.Api.Models.Requests
             [JsonProperty("session_max_duration")]
             public int SessionMaxDuration { get; set; } = 60;
         }
-       
-        public class PortsData
-        {
-            [JsonProperty("port")]
-            public int Port { get; set; } = 5555;
-       
-            [JsonProperty("protocol")]
-            public string Protocol { get; set; } = "TCP";
-       
-            [JsonProperty("to_check")]
-            public bool ToCheck { get; set; } = true;
-       
-            [JsonProperty("tls_upgrade")]
-            public bool TlsUpgrade { get; set; } = false;
-       
-            [JsonProperty("name")]
-            public string PortName { get; set; } = "Game Port";
-        }
-       
+
         public class ProbeData
         {
             [JsonProperty("optimal_ping")]
@@ -171,7 +154,10 @@ namespace Edgegap.Editor.Api.Models.Requests
         {
         }
         
-        /// <summary>Init with required info. Default version/tag == "default".</summary>
+        /// <summary>
+        /// Init with required info. Default version/tag == "default".
+        /// Since we're updating, we only require the AppName.
+        /// </summary>
         /// <param name="appName">The name of the application.</param>
         public UpdateAppVersionRequest(string appName)
         {

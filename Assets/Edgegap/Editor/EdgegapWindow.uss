@@ -180,11 +180,15 @@ Toggle > #unity-checkmark {
 }
 
 .shakeStart {
-    left: 5px; /* or however much you want to displace it */
-    transition: left 50ms ease-in-out; /* or adjust for the feel you want */
+    left: 5px;
+    transition: left 50ms ease-in-out;
 }
 
 .shakeEnd {
     left: -5px;
     transition: left 50ms ease-in-out;
+}
+
+.customContainerChildTxt {
+    padding-left: 32px;
 }

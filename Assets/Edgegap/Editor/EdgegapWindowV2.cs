@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Edgegap.Editor.Api;
+using Edgegap.Editor.Api.Models;
 using Edgegap.Editor.Api.Models.Requests;
 using Edgegap.Editor.Api.Models.Results;
 using IO.Swagger.Model;
@@ -36,17 +37,19 @@ namespace Edgegap.Editor
         private Sprite _appIconSpriteObj;
         private string _appIconBase64Str;
         private ApiEnvironment _apiEnvironment; // TODO: Swap out hard-coding with UI element?
-        private string _appVersionName; // TODO: Swap out hard-coding with UI element?
         private GetRegistryCredentialsResult _credentials;
         private static readonly Regex _appNameAllowedCharsRegex = new(@"^[a-zA-Z0-9_\-+\.]*$");
         private GetCreateAppResult loadedApp;
+        private string _deploymentRequestId;
+        private string _userExternalIp;
+        private bool _isAwaitingDeploymentReadyStatus;
         #endregion // Vars
         
         
         #region Vars -> Interactable Elements
         private Button _debugBtn;
         
-        /// <summary>(!) This will only contain `*` chars: For the real token, see `_apiTokenInputUnmaskedStr`.</summary>
+        /// <summary>(!) This is saved manually to PlayerPrefs via Base64 instead of via UiBuilder</summary>
         private TextField _apiTokenInput;
         
         private Button _apiTokenVerifyBtn;
@@ -56,18 +59,22 @@ namespace Edgegap.Editor
         private Foldout _appInfoFoldout;
         private Button _appLoadExistingBtn;
         private TextField _appNameInput;
-        private ObjectField _appIconSpriteObjInput; // selects a Sprite object directly
+        /// <summary>`Sprite` type</summary>
+        private ObjectField _appIconSpriteObjInput;
         private Button _appCreateBtn;
         private Label _appCreateResultLabel;
 
         private Foldout _containerRegistryFoldout;
+        private TextField _containerNewTagVersionInput;
+        private TextField _containerPortNumInput;
+        /// <summary>`ProtocolType` type</summary>
+        private EnumField _containerTransportTypeEnumInput;
         private Toggle _containerUseCustomRegistryToggle;
         private VisualElement _containerCustomRegistryWrapper;
         private TextField _containerRegistryUrlInput;
         private TextField _containerImageRepositoryInput;
         private TextField _containerUsernameInput;
         private TextField _containerTokenInput;
-        private TextField _containerNewTagVersionInput;
         private Button _containerBuildAndPushServerBtn;
         private Label _containerBuildAndPushResultLabel;
         
@@ -198,13 +205,15 @@ namespace Edgegap.Editor
             _appCreateResultLabel = rootVisualElement.Q<Label>(EdgegapWindowMetadata.APP_CREATE_RESULT_LABEL_ID);
             
             _containerRegistryFoldout = rootVisualElement.Q<Foldout>(EdgegapWindowMetadata.CONTAINER_REGISTRY_FOLDOUT_ID);
+            _containerNewTagVersionInput = rootVisualElement.Q<TextField>(EdgegapWindowMetadata.CONTAINER_NEW_TAG_VERSION_TXT_ID);
+            _containerPortNumInput = rootVisualElement.Q<TextField>(EdgegapWindowMetadata.CONTAINER_REGISTRY_PORT_NUM_ID);
+            _containerTransportTypeEnumInput = rootVisualElement.Q<EnumField>(EdgegapWindowMetadata.CONTAINER_REGISTRY_TRANSPORT_TYPE_ENUM_ID);
             _containerUseCustomRegistryToggle = rootVisualElement.Q<Toggle>(EdgegapWindowMetadata.CONTAINER_USE_CUSTOM_REGISTRY_TOGGLE_ID);
             _containerCustomRegistryWrapper = rootVisualElement.Q<VisualElement>(EdgegapWindowMetadata.CONTAINER_CUSTOM_REGISTRY_WRAPPER_ID);
             _containerRegistryUrlInput = rootVisualElement.Q<TextField>(EdgegapWindowMetadata.CONTAINER_REGISTRY_URL_TXT_ID);
             _containerImageRepositoryInput = rootVisualElement.Q<TextField>(EdgegapWindowMetadata.CONTAINER_IMAGE_REPOSITORY_URL_TXT_ID);
             _containerUsernameInput = rootVisualElement.Q<TextField>(EdgegapWindowMetadata.CONTAINER_USERNAME_TXT_ID);
             _containerTokenInput = rootVisualElement.Q<TextField>(EdgegapWindowMetadata.CONTAINER_TOKEN_TXT_ID);
-            _containerNewTagVersionInput = rootVisualElement.Q<TextField>(EdgegapWindowMetadata.CONTAINER_NEW_TAG_VERSION_TXT_ID);
             _containerBuildAndPushServerBtn = rootVisualElement.Q<Button>(EdgegapWindowMetadata.CONTAINER_BUILD_AND_PUSH_BTN_ID);
             _containerBuildAndPushResultLabel = rootVisualElement.Q<Label>(EdgegapWindowMetadata.CONTAINER_BUILD_AND_PUSH_RESULT_LABEL_ID);
 
@@ -220,7 +229,6 @@ namespace Edgegap.Editor
             _footerNeedMoreGameServersBtn = rootVisualElement.Q<Button>(EdgegapWindowMetadata.FOOTER_NEED_MORE_GAME_SERVERS_BTN_ID);
             
             _apiEnvironment = EdgegapWindowMetadata.API_ENVIRONMENT; // (!) TODO: Hard-coded while unused in UI
-            _appVersionName = EdgegapWindowMetadata.APP_VERSION_NAME; // (!) TODO: Hard-coded while unused in UI
             
             #region Unused in v2 UI
             // _containerImageTagInput = rootVisualElement.Q<TextField>("tag");
@@ -272,6 +280,12 @@ namespace Edgegap.Editor
                 Assert.IsTrue(_containerRegistryFoldout is { name: EdgegapWindowMetadata.CONTAINER_REGISTRY_FOLDOUT_ID },
                     $"Expected {nameof(_containerRegistryFoldout)} via #{EdgegapWindowMetadata.CONTAINER_REGISTRY_FOLDOUT_ID}");
                 
+                Assert.IsTrue(_containerPortNumInput is { name: EdgegapWindowMetadata.CONTAINER_REGISTRY_PORT_NUM_ID },
+                    $"Expected {nameof(_containerPortNumInput)} via #{EdgegapWindowMetadata.CONTAINER_REGISTRY_PORT_NUM_ID}");
+                
+                Assert.IsTrue(_containerTransportTypeEnumInput is { name: EdgegapWindowMetadata.CONTAINER_REGISTRY_TRANSPORT_TYPE_ENUM_ID },
+                    $"Expected {nameof(_containerTransportTypeEnumInput)} via #{EdgegapWindowMetadata.CONTAINER_REGISTRY_TRANSPORT_TYPE_ENUM_ID}");
+                
                 Assert.IsTrue(_containerUseCustomRegistryToggle is { name: EdgegapWindowMetadata.CONTAINER_USE_CUSTOM_REGISTRY_TOGGLE_ID },
                     $"Expected {nameof(_containerUseCustomRegistryToggle)} via #{EdgegapWindowMetadata.CONTAINER_USE_CUSTOM_REGISTRY_TOGGLE_ID}");
                 
@@ -290,8 +304,6 @@ namespace Edgegap.Editor
                 Assert.IsTrue(_containerTokenInput is { name: EdgegapWindowMetadata.CONTAINER_TOKEN_TXT_ID },
                     $"Expected {nameof(_containerTokenInput)} via #{EdgegapWindowMetadata.CONTAINER_TOKEN_TXT_ID}");
                 
-                Assert.IsTrue(_containerNewTagVersionInput is { name: EdgegapWindowMetadata.CONTAINER_NEW_TAG_VERSION_TXT_ID },
-                    $"Expected {nameof(_containerNewTagVersionInput)} via #{EdgegapWindowMetadata.CONTAINER_NEW_TAG_VERSION_TXT_ID}");
                 
                 Assert.IsTrue(_containerTokenInput is { name: EdgegapWindowMetadata.CONTAINER_TOKEN_TXT_ID },
                     $"Expected {nameof(_containerTokenInput)} via #{EdgegapWindowMetadata.CONTAINER_TOKEN_TXT_ID}");
@@ -339,31 +351,6 @@ namespace Edgegap.Editor
             }
         }
 
-        private void initToggleDynamicUi()
-        {
-            hideResultLabels();
-            loadApiTokenFromBase64Pref();
-            _debugBtn.visible = EdgegapWindowMetadata.SHOW_DEBUG_BTN;
-        }
-
-        /// <summary>
-        /// Load ApiToken from PlayerPrefs. !persisted via ViewDataKey so we don't save
-        /// plaintext; base64 is at least better than nothing.
-        /// </summary>
-        private void loadApiTokenFromBase64Pref()
-        {
-            string apiTokenBase64Str = PlayerPrefs.GetString(EdgegapWindowMetadata.API_TOKEN_KEY_STR_PREF_ID, null);
-            if (apiTokenBase64Str != null)
-                _apiTokenInput.SetValueWithoutNotify(Base64Decode(apiTokenBase64Str));
-        }
-        
-        /// <summary>For example, result labels (success/err) should be hidden on init</summary>
-        private void hideResultLabels()
-        {
-            _appCreateResultLabel.visible = false;
-            _containerBuildAndPushResultLabel.visible = false;
-        }
-
         /// <summary>
         /// Register non-btn change actionss. We'll want to save for persistence, validate, etc
         /// </summary>
@@ -373,9 +360,27 @@ namespace Edgegap.Editor
             _apiTokenInput.RegisterCallback<FocusOutEvent>(onApiTokenInputFocusOut);
 
             _appNameInput.RegisterValueChangedCallback(onAppNameInputChanged);
+            _containerPortNumInput.RegisterCallback<FocusOutEvent>(onContainerPortNumInputFocusOut);
             
             _containerUseCustomRegistryToggle.RegisterValueChangedCallback(onContainerUseCustomRegistryToggle);
             _containerNewTagVersionInput.RegisterValueChangedCallback(onContainerNewTagVersionInputChanged);
+        }
+        
+        /// <summary>
+        /// Prevents memory leaks, mysterious errors and "ghost" values set from a previous session.
+        /// Should parity the opposute of registerFieldCallbacks().
+        /// </summary>
+        private void unregisterFieldCallbacks()
+        {
+            _apiTokenInput.UnregisterValueChangedCallback(onApiTokenInputChanged);
+            _apiTokenInput.UnregisterCallback<FocusOutEvent>(onApiTokenInputFocusOut);
+
+            _containerUseCustomRegistryToggle.UnregisterValueChangedCallback(onContainerUseCustomRegistryToggle);
+            _containerPortNumInput.UnregisterCallback<FocusOutEvent>(onContainerPortNumInputFocusOut);
+            
+            // Dirty deployment connection action btn workarounds (from legacy code)
+            _deploymentConnectionServerActionStopBtn.clickable.clicked -= StartServerCallback;
+            _deploymentConnectionServerActionStopBtn.clickable.clicked -= StopServerCallback;
         }
 
         /// <summary>
@@ -399,6 +404,55 @@ namespace Edgegap.Editor
             
             _footerDocumentationBtn.clickable.clicked += onFooterDocumentationBtnClick;
             _footerNeedMoreGameServersBtn.clickable.clicked += onFooterNeedMoreGameServersBtnClick;
+        }
+        
+        /// <summary>
+        /// Prevents memory leaks, mysterious errors and "ghost" values set from a previous session.
+        /// Should parity the opposute of registerClickEvents().
+        /// </summary>
+        private void unregisterClickEvents()
+        {
+            _debugBtn.clickable.clicked -= onDebugBtnClick;
+            
+            _apiTokenVerifyBtn.clickable.clicked -= onApiTokenVerifyBtnClick;
+            _apiTokenGetBtn.clickable.clicked -= onApiTokenGetBtnClick;
+            
+            _appCreateBtn.clickable.clicked -= onAppCreateBtnClickAsync;
+            _appLoadExistingBtn.clickable.clicked -= onAppLoadExistingBtnClickAsync;
+
+            _containerBuildAndPushServerBtn.clickable.clicked -= onContainerBuildAndPushServerBtnClickAsync;
+            
+            _deploymentsRefreshBtn.clickable.clicked -= onDeploymentsRefreshBtnClick;
+            _deploymentCreateBtn.clickable.clicked -= onDeploymentCreateBtnClick;
+            _deploymentConnectionServerActionStopBtn.clickable.clicked -= onDeploymentServerActionStopBtnClick;
+            
+            _footerDocumentationBtn.clickable.clicked -= onFooterDocumentationBtnClick;
+            _footerNeedMoreGameServersBtn.clickable.clicked -= onFooterNeedMoreGameServersBtnClick;
+        }
+        
+        private void initToggleDynamicUi()
+        {
+            hideResultLabels();
+            loadApiTokenFromBase64Pref();
+            _debugBtn.visible = EdgegapWindowMetadata.SHOW_DEBUG_BTN;
+        }
+
+        /// <summary>
+        /// Load ApiToken from PlayerPrefs. !persisted via ViewDataKey so we don't save
+        /// plaintext; base64 is at least better than nothing.
+        /// </summary>
+        private void loadApiTokenFromBase64Pref()
+        {
+            string apiTokenBase64Str = PlayerPrefs.GetString(EdgegapWindowMetadata.API_TOKEN_KEY_STR_PREF_ID, null);
+            if (apiTokenBase64Str != null)
+                _apiTokenInput.SetValueWithoutNotify(Base64Decode(apiTokenBase64Str));
+        }
+        
+        /// <summary>For example, result labels (success/err) should be hidden on init</summary>
+        private void hideResultLabels()
+        {
+            _appCreateResultLabel.visible = false;
+            _containerBuildAndPushResultLabel.visible = false;
         }
         
         
@@ -494,10 +548,12 @@ namespace Edgegap.Editor
 
         private bool checkHasAppName() => _appNameInput.value.Length > 0;
         private void onDeploymentsRefreshBtnClick() => _ = updateServerStatusAsync();
-        private void onDeploymentCreateBtnClick() => _ = startServerCallbackAsync();
         private void onDeploymentServerActionStopBtnClick() => _ = stopServerCallbackAsync();
         private void onFooterDocumentationBtnClick() => openDocumentationWebsite();
         private void onFooterNeedMoreGameServersBtnClick() => openNeedMoreGameServersWebsite();
+        
+        /// <summary>AKA "Create New Deployment" Btn</summary>
+        private void onDeploymentCreateBtnClick() => _ = createDeploymentStartServerAsync();
         #endregion // Init -> /Button Clicks
         #endregion // Init
 
@@ -506,41 +562,6 @@ namespace Edgegap.Editor
         private void assertAppNameExists() =>
             Assert.IsTrue(!string.IsNullOrEmpty(_appNameInput.value), 
                 $"Expected {nameof(_appNameInput)} val");
-        
-        /// <summary>
-        /// Prevents memory leaks, mysterious errors and "ghost" values set from a previous session.
-        /// </summary>
-        private void unregisterClickEvents()
-        {
-            _debugBtn.clickable.clicked -= onDebugBtnClick;
-            
-            _apiTokenVerifyBtn.clickable.clicked -= onApiTokenVerifyBtnClick;
-            _apiTokenGetBtn.clickable.clicked -= onApiTokenGetBtnClick;
-            
-            _appCreateBtn.clickable.clicked -= onAppCreateBtnClickAsync;
-            _appLoadExistingBtn.clickable.clicked -= onAppLoadExistingBtnClickAsync;
-
-            _containerBuildAndPushServerBtn.clickable.clicked -= onContainerBuildAndPushServerBtnClickAsync;
-            
-            _deploymentsRefreshBtn.clickable.clicked -= onDeploymentsRefreshBtnClick;
-            _deploymentCreateBtn.clickable.clicked -= onDeploymentCreateBtnClick;
-            _deploymentConnectionServerActionStopBtn.clickable.clicked -= onDeploymentServerActionStopBtnClick;
-            
-            _footerDocumentationBtn.clickable.clicked -= onFooterDocumentationBtnClick;
-            _footerNeedMoreGameServersBtn.clickable.clicked -= onFooterNeedMoreGameServersBtnClick;
-        }
-
-        private void unregisterFieldCallbacks()
-        {
-            _apiTokenInput.UnregisterValueChangedCallback(onApiTokenInputChanged);
-            _apiTokenInput.UnregisterCallback<FocusOutEvent>(onApiTokenInputFocusOut);
-
-            _containerUseCustomRegistryToggle.UnregisterValueChangedCallback(onContainerUseCustomRegistryToggle);
-            
-            // Dirty deployment connection action btn workarounds (from legacy code)
-            _deploymentConnectionServerActionStopBtn.clickable.clicked -= StartServerCallback;
-            _deploymentConnectionServerActionStopBtn.clickable.clicked -= StopServerCallback;
-        }
 
         /// <summary>TODO: Save persistent data?</summary>
         private void SyncObjectWithForm()
@@ -614,6 +635,27 @@ namespace Edgegap.Editor
             bool hasAppName = checkHasAppName();
             _appCreateBtn.SetEnabled(hasAppName);
             _appLoadExistingBtn.SetEnabled(hasAppName);
+        }
+        
+        /// <summary>On focus out, clamp port between 1024~49151</summary>
+        /// <param name="evt"></param>
+        private void onContainerPortNumInputFocusOut(FocusOutEvent evt)
+        { 
+            // Use TryParse to avoid exceptions
+            if (int.TryParse(_containerPortNumInput.value, out int port)) 
+            {
+                // Clamp the port to the range and set the value back to the TextField
+                _containerPortNumInput.value = Mathf.Clamp(
+                    port, 
+                    EdgegapWindowMetadata.PORT_MIN, 
+                    EdgegapWindowMetadata.PORT_MAX)
+                    .ToString();
+            }
+            else
+            {
+                // If input is !valid, set to default
+                _containerPortNumInput.value = EdgegapWindowMetadata.PORT_DEFAULT.ToString();
+            }
         }
         
         /// <summary>
@@ -1043,14 +1085,75 @@ namespace Edgegap.Editor
             }
         }
         
+        /// <summary>
+        /// V2 Successor to legacy startServerCallbackAsync() from "Create New Deployment" Btn.
+        /// </summary>
+        private async Task createDeploymentStartServerAsync()
+        {
+            // Hide previous result labels, disable btns (to reenable when done)
+            if (IsLogLevelDebug) Debug.Log("createDeploymentStartServerAsync");
+            hideResultLabels();
+            _deploymentCreateBtn.SetEnabled(false);
+            SetToolUIState(ToolState.ProcessingDeployment);
+
+            try
+            {
+                EdgegapDeploymentsApi deployApi = new(
+                    EdgegapWindowMetadata.API_ENVIRONMENT, 
+                    _apiTokenInput.value.Trim(),
+                    EdgegapWindowMetadata.LOG_LEVEL);
+
+                CreateDeploymentRequest createDeploymentReq = new(
+                    _appNameInput.value,
+                    _containerNewTagVersionInput.value);
+            
+                // Deploy => Every 2s check status =>
+                // Meanwhile, we'll get the users' external IP address async for use later =>
+                var createDeploymentResponseTask = deployApi.CreateDeploymentAwaitReadyStatusAsync(
+                    createDeploymentReq, 
+                    pollInterval: TimeSpan.FromSeconds(2));
+                
+                // Get the users' external IP address async for use later =>
+                EdgegapIpApi ipApi = new(
+                    EdgegapWindowMetadata.API_ENVIRONMENT, 
+                    _apiTokenInput.value.Trim(),
+                    EdgegapWindowMetadata.LOG_LEVEL);
+
+                var getYourPublicIpResponseTask = ipApi.GetYourPublicIp();
+                
+                // Await these 2 Tasks =>
+                await Task.WhenAll(createDeploymentResponseTask, getYourPublicIpResponseTask);
+                
+                // Get the results
+                EdgegapHttpResult<CreateDeploymentResult> createDeploymentResponse = createDeploymentResponseTask.Result;
+                EdgegapHttpResult<GetYourPublicIpResult> getYourPublicIpResponse = getYourPublicIpResponseTask.Result;
+                
+                // IP: Cache for later
+                _userExternalIp = getYourPublicIpResponse?.Data?.PublicIp;
+                if (string.IsNullOrEmpty(_userExternalIp))
+                    throw new NullReferenceException("Expected getYourPublicIpResponse.Data.PublicIp; TODO: Set UI err");
+                
+                // Create Deployment: Success?
+                bool isSuccess = !createDeploymentResponse.IsResultCode200;
+                if (!isSuccess)
+                    throw new NullReferenceException("Expected createDeploymentResponse.IsResultCode200; TODO: Set UI err");
+
+                throw new NotImplementedException("TODO: Handle Window createDeploymentResponse success");
+            }
+            finally
+            {
+                _deploymentCreateBtn.SetEnabled(false);
+            }
+        }
+        
         
         #region Untested Legacy V1 Code
         private readonly System.Timers.Timer _updateServerStatusCronjob = 
             new(EdgegapWindowMetadata.SERVER_STATUS_CRON_JOB_INTERVAL_MS);
         
         private bool _shouldUpdateServerStatus = false;
-        private string _deploymentRequestId;
-        private string _userExternalIp;
+        // private string _deploymentRequestId; // Moved to v2 top
+        // private string _userExternalIp; // Moved to v2 top
         // [SerializeField] private bool _autoIncrementTag = true; // TODO? Used by v1 api
         // [SerializeField] private string _containerImageTag; // TODO? Used by v1 api
         
@@ -1307,6 +1410,15 @@ namespace Edgegap.Editor
                 // update edgegap server settings for new tag
                 ShowBuildWorkInProgress("Updating server info on Edgegap");
                 EdgegapAppApi appApi = new(_apiEnvironment, _apiTokenInput.value);
+
+                PortsData[] ports =
+                {
+                    new()
+                    {
+                        Port = int.Parse(_containerPortNumInput.value), // OnInputChange clamps + validates,
+                        ProtocolStr = _containerTransportTypeEnumInput.value.ToString(),
+                    },
+                };
                 
                 UpdateAppVersionRequest updateAppVerReq = new(_appNameInput.value)
                 {
@@ -1314,6 +1426,9 @@ namespace Edgegap.Editor
                     DockerImage = imageName,
                     DockerRepository = registry,
                     DockerTag = tag,
+                    PrivateUsername = _containerUsernameInput.value,
+                    PrivateToken = _containerTokenInput.value,
+                    Ports = ports,
                 };
 
                 EdgegapHttpResult<UpsertAppVersionResult> updateAppVersionResult = await appApi.UpsertAppVersion(updateAppVerReq);
@@ -1405,6 +1520,7 @@ namespace Edgegap.Editor
         // }
 
         /// <summary>Legacy from v1 - untested</summary>
+        [Obsolete("Use createDeploymentStartServerAsync")]
         private async Task startServerCallbackAsync()
         {
             if (IsLogLevelDebug) Debug.Log("startServerCallbackAsync");
@@ -1417,7 +1533,7 @@ namespace Edgegap.Editor
             // Setup post data
             DeployPostData deployPostData = new DeployPostData(
                 _appNameInput.value, 
-                _appVersionName, // TODO: Hard-coded while unused in UI 
+                _containerNewTagVersionInput.value, 
                 new List<string> { _userExternalIp });
             
             string json = JsonConvert.SerializeObject(deployPostData);
@@ -1587,11 +1703,6 @@ namespace Edgegap.Editor
                 _deploymentConnectionServerActionStopBtn.text = "Stop Server";
                 _deploymentConnectionServerActionStopBtn.clickable.clicked += StopServerCallback;
             }
-            else
-            {
-                _deploymentConnectionServerActionStopBtn.text = "Start Server";
-                _deploymentConnectionServerActionStopBtn.clickable.clicked += StartServerCallback;
-            }
         }
 
         private void SetDockerRepoInfoUI(ToolState toolState)
@@ -1612,23 +1723,13 @@ namespace Edgegap.Editor
             bool canStopDeployment = toolState.CanStopDeployment();
 
             // A bit dirty, but ensures the callback is not bound multiple times on the button.
-            _deploymentConnectionServerActionStopBtn.clickable.clicked -= StartServerCallback;
             _deploymentConnectionServerActionStopBtn.clickable.clicked -= StopServerCallback;
 
             _deploymentConnectionServerActionStopBtn.SetEnabled(canStartDeployment || canStopDeployment);
-
             _containerBuildAndPushServerBtn.SetEnabled(canStartDeployment);
 
             if (canStopDeployment)
-            {
-                _deploymentConnectionServerActionStopBtn.text = "Stop Server";
                 _deploymentConnectionServerActionStopBtn.clickable.clicked += StopServerCallback;
-            }
-            else
-            {
-                _deploymentConnectionServerActionStopBtn.text = "Start Server";
-                _deploymentConnectionServerActionStopBtn.clickable.clicked += StartServerCallback;
-            }
         }
         
         /// <summary>
@@ -1643,7 +1744,7 @@ namespace Edgegap.Editor
             // Setup post data
             DeployPostData deployPostData = new DeployPostData(
                 _appNameInput.value, 
-                _appVersionName, 
+                _containerNewTagVersionInput.value, 
                 new List<string> { _userExternalIp });
             
             string json = JsonConvert.SerializeObject(deployPostData);
