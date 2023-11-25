@@ -29,7 +29,7 @@
 }
 
 .text--muted {
-    color: rgb(138, 138, 138);
+    color: rgb(192, 192, 192);
 }
 
 .text--success {

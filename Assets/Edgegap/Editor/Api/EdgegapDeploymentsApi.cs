@@ -60,7 +60,7 @@ namespace Edgegap.Editor.Api
         /// </returns>
         public async Task<EdgegapHttpResult<GetDeploymentStatusResult>> GetDeploymentStatusAsync(string requestId)
         {
-            HttpResponseMessage response = await GetAsync($"v1/status{requestId}");
+            HttpResponseMessage response = await GetAsync($"v1/status/{requestId}");
             EdgegapHttpResult<GetDeploymentStatusResult> result = new(response);
             
             bool isSuccess = response.StatusCode == HttpStatusCode.OK; // 200
@@ -84,7 +84,7 @@ namespace Edgegap.Editor.Api
         /// </returns>
         public async Task<EdgegapHttpResult<StopActiveDeploymentResult>> StopActiveDeploymentAsync(string requestId)
         {
-            HttpResponseMessage response = await DeleteAsync($"v1/status{requestId}");
+            HttpResponseMessage response = await DeleteAsync($"v1/stop/{requestId}");
             EdgegapHttpResult<StopActiveDeploymentResult> result = new(response);
             
             bool isSuccess = response.StatusCode == HttpStatusCode.OK; // 200
@@ -140,12 +140,34 @@ namespace Edgegap.Editor.Api
             
             while (!isReady && !cts.Token.IsCancellationRequested)
             {
-                statusResponse = await GetDeploymentStatusAsync(requestId);
-                isReady = statusResponse.Data.DeploymentSummary.CurrentStatus == EdgegapWindowMetadata.READY_STATUS;
                 await Task.Delay(pollInterval, cts.Token);
+                statusResponse = await GetDeploymentStatusAsync(requestId);
+                isReady = statusResponse.Data.CurrentStatus == EdgegapWindowMetadata.READY_STATUS;
             }
 
             return statusResponse;
+        }
+        
+        /// <summary>If you recently stopped a deployment, but want to await TERMINATED (410) status.</summary>
+        /// <param name="requestId"></param>
+        /// <param name="pollInterval"></param>
+        public async Task<EdgegapHttpResult<StopActiveDeploymentResult>> AwaitTerminatedDeleteStatusAsync(
+            string requestId, 
+            TimeSpan pollInterval)
+        {
+            EdgegapHttpResult<StopActiveDeploymentResult> deleteResponse = null;
+            CancellationTokenSource cts = new(TimeSpan.FromMinutes(
+                EdgegapWindowMetadata.DEPLOYMENT_AWAIT_READY_STATUS_TIMEOUT_MINS));
+            bool isStopped = false;
+            
+            while (!isStopped && !cts.Token.IsCancellationRequested)
+            {
+                await Task.Delay(pollInterval, cts.Token);
+                deleteResponse = await StopActiveDeploymentAsync(requestId);
+                isStopped = deleteResponse.StatusCode == HttpStatusCode.Gone; // 410
+            }
+
+            return deleteResponse;
         }
         #endregion Chained API Methods
     }

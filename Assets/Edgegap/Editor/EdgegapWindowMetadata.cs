@@ -55,8 +55,10 @@ namespace Edgegap.Editor
         public const int PORT_MIN = 1024;
         public const int PORT_MAX = 49151;
         public const int DEPLOYMENT_AWAIT_READY_STATUS_TIMEOUT_MINS = 1;
+        public const int DEPLOYMENT_READY_STATUS_POLL_SECONDS = 2;
+        public const int DEPLOYMENT_STOP_STATUS_POLL_SECONDS = 2;
         public const ProtocolType DEFAULT_PROTOCOL_TYPE = ProtocolType.UDP;
-        public const string READY_STATUS = "READY";
+        public const string READY_STATUS = "Status.READY";
 
         public const string EDGEGAP_GET_A_TOKEN_URL = "https://app.edgegap.com/?oneClick=true";
         public const string EDGEGAP_CONTACT_EN_URL = "https://edgegap.com/en/resources/contact";
@@ -65,6 +67,7 @@ namespace Edgegap.Editor
         public const string DEFAULT_VERSION_TAG = "latest";
         public const string LOADING_RICH_STR = "<i>Loading...</i>";
         public const string PROCESSING_RICH_STR = "<i>Processing...</i>";
+        public const string DEPLOY_REQUEST_RICH_STR = "<i>Requesting Deploy...</i>";
         
         #region Colors
         /// <summary>Earthy lime green</summary>
@@ -115,7 +118,8 @@ namespace Edgegap.Editor
         
         #region Player Pref Key Ids for persistence
         /// <summary>Cached as base64</summary>
-        public const string API_TOKEN_KEY_STR_PREF_ID = "ApiTokenKey";
+        public const string API_TOKEN_KEY_STR_PREF_ID = "ApiToken";
+        public const string DEPLOYMENT_REQUEST_ID_KEY_STR_PREF_ID = "DeploymentRequestId";
         #endregion // Player Pref Key Ids for persistence
         
         #region UI Element Ids
@@ -147,11 +151,12 @@ namespace Edgegap.Editor
             
         public const string DEPLOYMENTS_FOLDOUT_ID = "DeploymentsFoldout";
         public const string DEPLOYMENTS_REFRESH_BTN_ID = "DeploymentsRefreshBtn";
-        public const string DEPLOYMENT_CREATE_BTN_ID = "DeploymentCreateBtn";
-        public const string DEPLOYMENTS_CONTAINER_ID = "DeploymentConnectionsGroupBox"; // Dynamic
-        public const string DEPLOYMENT_CONNECTION_URL_LABEL_ID = "DeploymentConnectionUrlLabel"; // Dynamic
-        public const string DEPLOYMENT_CONNECTION_STATUS_LABEL_ID = "DeploymentConnectionStatusLabel"; // Dynamic
-        public const string DEPLOYMENT_CONNECTION_SERVER_ACTION_STOP_BTN_ID = "DeploymentConnectionServerActionStopBtn";
+        public const string DEPLOYMENTS_CREATE_BTN_ID = "DeploymentsCreateBtn";
+        public const string DEPLOYMENTS_STATUS_LABEL_ID = "DeploymentsStatusLabel";
+        public const string DEPLOYMENTS_CONTAINER_ID = "DeploymentsConnectionGroupBox";
+        public const string DEPLOYMENTS_CONNECTION_URL_LABEL_ID = "DeploymentConnectionUrlLabel"; // Dynamic
+        public const string DEPLOYMENTS_CONNECTION_STATUS_LABEL_ID = "DeploymentsConnectionStatusLabel"; // Dynamic
+        public const string DEPLOYMENTS_CONNECTION_SERVER_ACTION_STOP_BTN_ID = "DeploymentsConnectionServerStopBtn";
             
         public const string FOOTER_DOCUMENTATION_BTN_ID = "FooterDocumentationBtn";
         public const string FOOTER_NEED_MORE_GAME_SERVERS_BTN_ID = "FooterNeedMoreGameServersBtn";

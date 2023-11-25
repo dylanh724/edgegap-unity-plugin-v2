@@ -1,7 +1,9 @@
+using System;
 using System.Net;
 using System.Net.Http;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using UnityEngine;
 
 namespace Edgegap.Editor.Api.Models.Results
 {
@@ -31,10 +33,23 @@ namespace Edgegap.Editor.Api.Models.Results
         public EdgegapErrorResult Error { get; set; }
         
         #region Common Shortcuts
+        /// <summary>OK</summary>
         public bool IsResultCode200 => StatusCode == HttpStatusCode.OK;
+        
+        /// <summary>NoContent</summary>
         public bool IsResultCode204 => StatusCode == HttpStatusCode.NoContent;
+        
+        /// <summary>Forbidden</summary>
+        public bool IsResultCode403 => StatusCode == HttpStatusCode.Forbidden;
+        
+        /// <summary>Conflict</summary>
         public bool IsResultCode409 => StatusCode == HttpStatusCode.Conflict;
+
+        /// <summary>BadRequest</summary>
         public bool IsResultCode400 => StatusCode == HttpStatusCode.BadRequest;
+        
+        /// <summary>Gone</summary>
+        public bool IsResultCode410 => StatusCode == HttpStatusCode.Gone;
         #endregion // Common Shortcuts
         
         
@@ -46,11 +61,19 @@ namespace Edgegap.Editor.Api.Models.Results
             this.ReasonPhrase = httpResponse.ReasonPhrase;
             this.StatusCode = httpResponse.StatusCode;
             
-            this.Json = httpResponse.Content.ReadAsStringAsync().Result;
-            
-            this.Error = JsonConvert.DeserializeObject<EdgegapErrorResult>(Json);
-            if (Error != null && string.IsNullOrEmpty(Error.ErrorMessage))
-                Error = null;
+            try
+            {
+                // TODO: This can be read async, but can't do this in a Constructor. Instead, make a factory builder Task =>
+                this.Json = httpResponse.Content.ReadAsStringAsync().Result;
+                
+                this.Error = JsonConvert.DeserializeObject<EdgegapErrorResult>(Json);
+                if (Error != null && string.IsNullOrEmpty(Error.ErrorMessage))
+                    Error = null;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"Error (reading httpResponse.Content): {e} - Client expected json, but server returned !json");
+            }
         }
     }
 

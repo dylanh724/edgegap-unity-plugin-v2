@@ -7,10 +7,6 @@
                 <ui:Button text="DEBUG" parse-escape-sequences="true" display-tooltip-when-elided="true" name="DebugBtn" tooltip="Hide me @ EdgegapWindowMetadata.SHOW_DEBUG_BTN" style="-unity-text-align: middle-left; white-space: normal; text-overflow: clip; justify-content: flex-start; align-self: flex-end; position: absolute; right: 0; top: 0; padding-top: 3px;" />
             </ui:Label>
         </ui:VisualElement>
-        <ui:GroupBox name="FooterHorizGroup" class="container-row-parent" style="flex-direction: row; justify-content: center; align-items: auto; align-self: center; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; border-top-left-radius: 1px; border-top-right-radius: 1px; border-bottom-right-radius: 1px; border-bottom-left-radius: 1px; border-right-color: rgb(0, 0, 0); border-left-color: rgb(0, 0, 0); padding-right: 135px; padding-left: 150px; padding-top: 15px; padding-bottom: 15px;">
-            <ui:Button text="Documentation" tooltip="Opens the documentation website. The website version changes depending on the selected API environment." name="FooterDocumentationBtn" class="button-edgegap text-edgegap" />
-            <ui:Button text="Add More Game Servers!" tooltip="Opens the documentation website. The website version changes depending on the selected API environment." name="FooterNeedMoreGameServersBtn" class="button-edgegap text-edgegap bg-purple" style="width: 220px; max-width: none; min-width: auto;" />
-        </ui:GroupBox>
     </ui:VisualElement>
     <ui:ScrollView name="BodyScrollView" style="background-color: rgb(37, 37, 37); height: 1132px; justify-content: flex-end;">
         <ui:GroupBox name="ApiTokenHorizGroupBox" class="container-row-parent" style="flex-direction: row; margin-left: 0; margin-right: 0; margin-bottom: 10px; align-items: center; justify-content: flex-start; align-self: auto; padding-bottom: 0; padding-top: 0;">
@@ -67,7 +63,7 @@
                     </ui:VisualElement>
                     <ui:VisualElement name="ContainerBuildAndPushHorizRow" style="flex-grow: 1; flex-direction: row;">
                         <ui:Button name="ContainerBuildAndPushBtn" text="Build and Push" class="button-edgegap text-edgegap" style="margin-left: 0;" />
-                        <ui:Label tabindex="-1" text="{ContainerBuildAndPushResultLabel}" parse-escape-sequences="true" display-tooltip-when-elided="true" name="ContainerBuildAndPushResultLabel" class="text-edgegap" style="color: rgb(138, 238, 140); align-items: stretch; justify-content: flex-start; align-self: center;" />
+                        <ui:Label tabindex="-1" text="{ContainerBuildAndPushResultLabel}" parse-escape-sequences="true" display-tooltip-when-elided="true" name="ContainerBuildAndPushResultLabel" class="text-edgegap" style="color: rgb(138, 238, 140); align-items: stretch; justify-content: flex-start; align-self: center; display: none;" />
                     </ui:VisualElement>
                 </ui:Foldout>
             </ui:VisualElement>
@@ -75,22 +71,28 @@
                 <ui:VisualElement name="Row" class="container-row" style="flex-grow: 1; align-items: center; flex-direction: row; justify-content: flex-start; align-self: auto;" />
                 <ui:GroupBox name="DeploymentsHorizGroupBox" style="flex-direction: row; justify-content: flex-start; align-items: stretch; align-self: flex-start; margin-left: 0; padding-left: 0;">
                     <ui:Button name="DeploymentsRefreshBtn" text="Refresh" class="button-edgegap text-edgegap" style="flex-grow: 0.5;" />
-                    <ui:Button name="DeploymentCreateBtn" text="Create New Deployment" class="button-edgegap text-edgegap" style="flex-grow: 0.5; max-width: 250px; min-width: 200px;" />
+                    <ui:Button name="DeploymentsCreateBtn" text="Create New Deployment" class="button-edgegap text-edgegap" style="flex-grow: 0.5; max-width: 250px; min-width: 200px;" />
                 </ui:GroupBox>
-                <ui:GroupBox name="DeploymentHeadersGroupBox" class="container-row-parent" style="flex-direction: row; padding-top: 6px; padding-right: 0; padding-bottom: 3px; padding-left: 0; margin-bottom: 0; align-self: auto; justify-content: flex-start; align-items: center;">
-                    <ui:Label name="connectionURLHeaderLabel" text="URL" style="flex-grow: 0.5; width: 41px; -unity-font-style: bold; align-items: auto; justify-content: flex-start; align-self: auto;" />
-                    <ui:Label name="connectionStatusHeaderLabel" text="Status" style="flex-grow: 0.5; align-items: stretch; -unity-text-align: upper-center; -unity-font-style: bold;" />
-                    <ui:Label name="connectionControlHeaderLabel" text="Control" style="flex-grow: 0.5; -unity-text-align: upper-center; -unity-font-style: bold;" />
+                <ui:Label tabindex="-1" text="{DeploymentsStatusLabel}" parse-escape-sequences="true" display-tooltip-when-elided="true" name="DeploymentsStatusLabel" class="text-edgegap" style="color: rgb(138, 238, 140); white-space: normal; text-overflow: ellipsis; width: 650px; display: none; margin-left: 3px;" />
+                <ui:GroupBox name="DeploymentsHeadersGroupBox" class="container-row-parent" style="flex-direction: row; padding-top: 6px; padding-right: 0; padding-bottom: 3px; padding-left: 0; margin-bottom: 0; align-self: auto; justify-content: flex-start; align-items: center;">
+                    <ui:Label name="DeploymentsConnectionStatusHeaderLabel" text="Status" style="flex-grow: 0.5; -unity-text-align: upper-left; -unity-font-style: bold; width: 75px;" />
+                    <ui:Label name="DeploymentsConnectionURLHeaderLabel" text="URL" style="flex-grow: 0.5; width: 150px; -unity-font-style: bold; align-items: auto; justify-content: flex-start; align-self: auto;" />
+                    <ui:Label name="DeploymentsConnectionControlHeaderLabel" text="Control" style="flex-grow: 0.5; -unity-text-align: upper-left; -unity-font-style: bold; width: 25px;" />
                 </ui:GroupBox>
-                <ui:GroupBox name="DeploymentConnectionsGroupBox" style="flex-direction: row; padding-left: 0; align-items: center; align-self: stretch; justify-content: flex-start; height: 32px;">
-                    <ui:Label name="DeploymentConnectionUrlLabel" text="{foo.edgegap.net:12345}" class="text--muted" style="flex-grow: 0.5; margin-left: 0; padding-left: 0; -unity-text-align: middle-left; align-items: center; width: auto;" />
-                    <ui:Label name="DeploymentConnectionStatusLabel" text="{Awaiting Connection}" class="text--muted" style="flex-grow: 0.6; flex-direction: column; -unity-text-align: middle-left; justify-content: flex-start; align-items: center;" />
-                    <ui:VisualElement name="ServerActionBtnHorizGroup" style="flex-grow: 1; flex-direction: row; align-items: center; justify-content: center;">
-                        <ui:Button name="DeploymentConnectionServerActionStopBtn" text="Stop Server" class="button-edgegap text-edgegap" style="min-width: auto; width: 125px; max-width: none;" />
+                <ui:GroupBox name="DeploymentsConnectionGroupBox" style="flex-direction: row; padding-left: 0; align-items: center; align-self: stretch; justify-content: flex-start; height: 32px;">
+                    <ui:Label name="DeploymentsConnectionStatusLabel" class="text--muted" style="flex-grow: 0.6; flex-direction: column; -unity-text-align: middle-left; justify-content: flex-start; align-items: center; width: 75px;" />
+                    <ui:Label name="DeploymentConnectionUrlLabel" class="text--muted" style="flex-grow: 0.5; margin-left: 0; padding-left: 0; -unity-text-align: middle-left; align-items: center; width: 150px;" />
+                    <ui:VisualElement name="DeploymentsConnectionServerStopHorizBtnHorizGroup" style="flex-grow: 1; flex-direction: row; align-items: center; justify-content: center; width: 50px;">
+                        <ui:Button name="DeploymentsConnectionServerStopBtn" text="Stop Server" class="button-edgegap text-edgegap" style="min-width: auto; width: 125px; max-width: none; visibility: visible; display: none;" />
                     </ui:VisualElement>
                 </ui:GroupBox>
             </ui:Foldout>
+            <ui:ListView focusable="true" />
             <ui:VisualElement name="ServerDataContainer" />
         </ui:VisualElement>
+        <ui:GroupBox name="FooterHorizGroup" class="container-row-parent" style="flex-direction: row; justify-content: center; align-items: auto; align-self: center; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; border-top-left-radius: 1px; border-top-right-radius: 1px; border-bottom-right-radius: 1px; border-bottom-left-radius: 1px; border-right-color: rgb(0, 0, 0); border-left-color: rgb(0, 0, 0); padding-right: 135px; padding-left: 150px; padding-top: 15px; padding-bottom: 15px;">
+            <ui:Button text="Documentation" tooltip="Opens the documentation website. The website version changes depending on the selected API environment." name="FooterDocumentationBtn" class="button-edgegap text-edgegap" />
+            <ui:Button text="Add More Game Servers!" tooltip="Opens the documentation website. The website version changes depending on the selected API environment." name="FooterNeedMoreGameServersBtn" class="button-edgegap text-edgegap bg-purple" style="width: 220px; max-width: none; min-width: auto;" />
+        </ui:GroupBox>
     </ui:ScrollView>
 </ui:UXML>

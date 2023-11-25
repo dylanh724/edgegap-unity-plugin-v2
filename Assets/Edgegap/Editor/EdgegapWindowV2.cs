@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -29,7 +27,6 @@ namespace Edgegap.Editor
         #region Vars
         public static bool IsLogLevelDebug => 
             EdgegapWindowMetadata.LOG_LEVEL == EdgegapWindowMetadata.LogLevel.Debug;
-        private static readonly HttpClient _httpClient = new();
         private bool IsInitd;
         private VisualTreeAsset _visualTree;
         private bool _isApiTokenVerified; // Toggles the rest of the UI
@@ -39,7 +36,8 @@ namespace Edgegap.Editor
         private ApiEnvironment _apiEnvironment; // TODO: Swap out hard-coding with UI element?
         private GetRegistryCredentialsResult _credentials;
         private static readonly Regex _appNameAllowedCharsRegex = new(@"^[a-zA-Z0-9_\-+\.]*$");
-        private GetCreateAppResult loadedApp;
+        private GetCreateAppResult _loadedApp;
+        private CreateDeploymentResult _lastDeploymentCreated;
         private string _deploymentRequestId;
         private string _userExternalIp;
         private bool _isAwaitingDeploymentReadyStatus;
@@ -80,22 +78,16 @@ namespace Edgegap.Editor
         
         private Foldout _deploymentsFoldout;
         private Button _deploymentsRefreshBtn;
-        private Button _deploymentCreateBtn;
-        private VisualElement _deploymentServerDataContainer; // readonly
-        private Label _deploymentConnectionStatusLabel; // readonly
-        private VisualElement _deploymentConnectionUrlLabel; // Readonly
-        private Button _deploymentConnectionServerActionStopBtn;
+        private Button _deploymentsCreateBtn;
+        /// <summary>display:none (since it's on its own line), rather than !visible.</summary>
+        private Label _deploymentsStatusLabel;
+        private VisualElement _deploymentsServerDataContainer;
+        private Label _deploymentsConnectionUrlLabel;
+        private Label _deploymentsConnectionStatusLabel;
+        private Button _deploymentsConnectionStopBtn;
 
         private Button _footerDocumentationBtn;
         private Button _footerNeedMoreGameServersBtn;
-
-        #region // Vars -> Legacy v1
-        // private Button _connectionBtn;
-        // private TextField _containerImageTagInput;
-        // private Toggle _autoIncrementTagInput;
-        // private EnumField _apiEnvironmentSelect;
-        #endregion // Vars -> Legacy v1
-        
         #endregion // Vars
 
         [MenuItem("Edgegap/Server Management %#e")]
@@ -111,15 +103,10 @@ namespace Edgegap.Editor
         #region Unity Funcs
         protected void OnEnable()
         {
-            // Set root VisualElement and style
+            // Set root VisualElement and style: V2 still uses EdgegapWindow.[uxml|uss]
             _visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>("Assets/Edgegap/Editor/EdgegapWindow.uxml");
             StyleSheet styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>("Assets/Edgegap/Editor/EdgegapWindow.uss");
             rootVisualElement.styleSheets.Add(styleSheet);
-
-            LoadToolData();
-
-            if (string.IsNullOrWhiteSpace(_userExternalIp))
-                _userExternalIp = GetExternalIpAddress();
         }
 
         public async void CreateGUI()
@@ -133,16 +120,6 @@ namespace Edgegap.Editor
             syncFormWithObjectStatic();
             await syncFormWithObjectDynamicAsync(); // API calls
 
-            #region Legacy code from v1 // TODO - Look into what this does
-            // If we cached a deploymentId, restore the settings
-            // bool hasActiveDeployment = !string.IsNullOrEmpty(_deploymentRequestId);
-            //
-            // if (hasActiveDeployment)
-            //     RestoreActiveDeployment();
-            // else
-            //     DisconnectCallback();
-            #endregion // Legacy code from v1: TODO - Look into what this does
-
             IsInitd = true;
         }
 
@@ -152,11 +129,6 @@ namespace Edgegap.Editor
             unregisterClickEvents();
             unregisterFieldCallbacks();
             SyncObjectWithForm();
-            
-            #region Legacy v1
-            // SaveToolData(); // Legacy v1
-            // EdgegapServerDataManager.DeregisterServerDataContainer(_deploymentServerDataContainer); // Legacy v1
-            #endregion // Legacy v1
         }
         #endregion // Unity Funcs
 
@@ -219,24 +191,17 @@ namespace Edgegap.Editor
 
             _deploymentsFoldout = rootVisualElement.Q<Foldout>(EdgegapWindowMetadata.DEPLOYMENTS_FOLDOUT_ID);
             _deploymentsRefreshBtn = rootVisualElement.Q<Button>(EdgegapWindowMetadata.DEPLOYMENTS_REFRESH_BTN_ID);
-            _deploymentCreateBtn = rootVisualElement.Q<Button>(EdgegapWindowMetadata.DEPLOYMENT_CREATE_BTN_ID);
-            _deploymentServerDataContainer = rootVisualElement.Q<VisualElement>(EdgegapWindowMetadata.DEPLOYMENTS_CONTAINER_ID); // Dynamic
-            _deploymentConnectionUrlLabel = rootVisualElement.Q<Label>(EdgegapWindowMetadata.DEPLOYMENT_CONNECTION_URL_LABEL_ID);
-            _deploymentConnectionStatusLabel = rootVisualElement.Q<Label>(EdgegapWindowMetadata.DEPLOYMENT_CONNECTION_STATUS_LABEL_ID);
-            _deploymentConnectionServerActionStopBtn = rootVisualElement.Q<Button>(EdgegapWindowMetadata.DEPLOYMENT_CONNECTION_SERVER_ACTION_STOP_BTN_ID);
+            _deploymentsCreateBtn = rootVisualElement.Q<Button>(EdgegapWindowMetadata.DEPLOYMENTS_CREATE_BTN_ID);
+            _deploymentsStatusLabel = rootVisualElement.Q<Label>(EdgegapWindowMetadata.DEPLOYMENTS_STATUS_LABEL_ID);
+            _deploymentsServerDataContainer = rootVisualElement.Q<VisualElement>(EdgegapWindowMetadata.DEPLOYMENTS_CONTAINER_ID); // Dynamic
+            _deploymentsConnectionUrlLabel = rootVisualElement.Q<Label>(EdgegapWindowMetadata.DEPLOYMENTS_CONNECTION_URL_LABEL_ID);
+            _deploymentsConnectionStatusLabel = rootVisualElement.Q<Label>(EdgegapWindowMetadata.DEPLOYMENTS_CONNECTION_STATUS_LABEL_ID);
+            _deploymentsConnectionStopBtn = rootVisualElement.Q<Button>(EdgegapWindowMetadata.DEPLOYMENTS_CONNECTION_SERVER_ACTION_STOP_BTN_ID);
             
             _footerDocumentationBtn = rootVisualElement.Q<Button>(EdgegapWindowMetadata.FOOTER_DOCUMENTATION_BTN_ID);
             _footerNeedMoreGameServersBtn = rootVisualElement.Q<Button>(EdgegapWindowMetadata.FOOTER_NEED_MORE_GAME_SERVERS_BTN_ID);
             
             _apiEnvironment = EdgegapWindowMetadata.API_ENVIRONMENT; // (!) TODO: Hard-coded while unused in UI
-            
-            #region Unused in v2 UI
-            // _containerImageTagInput = rootVisualElement.Q<TextField>("tag");
-            // _autoIncrementTagInput = rootVisualElement.Q<Toggle>("autoIncrementTag");
-            // _connectionBtn = rootVisualElement.Q<Button>("connectionBtn");
-            // _apiEnvironmentSelect = rootVisualElement.Q<EnumField>("environmentSelect");
-            // _appVersionNameInput = rootVisualElement.Q<TextField>("appVersionName");
-            #endregion // Unused in v2 UI
         }
 
         /// <summary>
@@ -317,20 +282,23 @@ namespace Edgegap.Editor
                 Assert.IsTrue(_deploymentsRefreshBtn is { name: EdgegapWindowMetadata.DEPLOYMENTS_REFRESH_BTN_ID },
                     $"Expected {nameof(_deploymentsRefreshBtn)} via #{EdgegapWindowMetadata.DEPLOYMENTS_REFRESH_BTN_ID}");
                 
-                Assert.IsTrue(_deploymentCreateBtn is { name: EdgegapWindowMetadata.DEPLOYMENT_CREATE_BTN_ID },
-                    $"Expected {nameof(_deploymentCreateBtn)} via #{EdgegapWindowMetadata.DEPLOYMENT_CREATE_BTN_ID}");
+                Assert.IsTrue(_deploymentsCreateBtn is { name: EdgegapWindowMetadata.DEPLOYMENTS_CREATE_BTN_ID },
+                    $"Expected {nameof(_deploymentsCreateBtn)} via #{EdgegapWindowMetadata.DEPLOYMENTS_CREATE_BTN_ID}");
                 
-                Assert.IsTrue(_deploymentServerDataContainer is { name: EdgegapWindowMetadata.DEPLOYMENTS_CONTAINER_ID },
-                    $"Expected {nameof(_deploymentServerDataContainer)} via #{EdgegapWindowMetadata.DEPLOYMENTS_CONTAINER_ID}");
+                Assert.IsTrue(_deploymentsStatusLabel is { name: EdgegapWindowMetadata.DEPLOYMENTS_STATUS_LABEL_ID },
+                    $"Expected {nameof(_deploymentsStatusLabel)} via #{EdgegapWindowMetadata.DEPLOYMENTS_STATUS_LABEL_ID}");
                 
-                Assert.IsTrue(_deploymentConnectionUrlLabel is { name: EdgegapWindowMetadata.DEPLOYMENT_CONNECTION_URL_LABEL_ID },
-                    $"Expected {nameof(_deploymentConnectionUrlLabel)} via #{EdgegapWindowMetadata.DEPLOYMENT_CONNECTION_URL_LABEL_ID}");
+                Assert.IsTrue(_deploymentsServerDataContainer is { name: EdgegapWindowMetadata.DEPLOYMENTS_CONTAINER_ID },
+                    $"Expected {nameof(_deploymentsServerDataContainer)} via #{EdgegapWindowMetadata.DEPLOYMENTS_CONTAINER_ID}");
                 
-                Assert.IsTrue(_deploymentConnectionStatusLabel is { name: EdgegapWindowMetadata.DEPLOYMENT_CONNECTION_STATUS_LABEL_ID },
-                    $"Expected {nameof(_deploymentConnectionStatusLabel)} via #{EdgegapWindowMetadata.DEPLOYMENT_CONNECTION_STATUS_LABEL_ID}");
+                Assert.IsTrue(_deploymentsConnectionUrlLabel is { name: EdgegapWindowMetadata.DEPLOYMENTS_CONNECTION_URL_LABEL_ID },
+                    $"Expected {nameof(_deploymentsConnectionUrlLabel)} via #{EdgegapWindowMetadata.DEPLOYMENTS_CONNECTION_URL_LABEL_ID}");
                 
-                Assert.IsTrue(_deploymentConnectionServerActionStopBtn is { name: EdgegapWindowMetadata.DEPLOYMENT_CONNECTION_SERVER_ACTION_STOP_BTN_ID },
-                    $"Expected {nameof(_deploymentConnectionServerActionStopBtn)} via #{EdgegapWindowMetadata.DEPLOYMENT_CONNECTION_SERVER_ACTION_STOP_BTN_ID}");
+                Assert.IsTrue(_deploymentsConnectionStatusLabel is { name: EdgegapWindowMetadata.DEPLOYMENTS_CONNECTION_STATUS_LABEL_ID },
+                    $"Expected {nameof(_deploymentsConnectionStatusLabel)} via #{EdgegapWindowMetadata.DEPLOYMENTS_CONNECTION_STATUS_LABEL_ID}");
+                
+                Assert.IsTrue(_deploymentsConnectionStopBtn is { name: EdgegapWindowMetadata.DEPLOYMENTS_CONNECTION_SERVER_ACTION_STOP_BTN_ID },
+                    $"Expected {nameof(_deploymentsConnectionStopBtn)} via #{EdgegapWindowMetadata.DEPLOYMENTS_CONNECTION_SERVER_ACTION_STOP_BTN_ID}");
                 
                 
                 Assert.IsTrue(_footerDocumentationBtn is { name: EdgegapWindowMetadata.FOOTER_DOCUMENTATION_BTN_ID },
@@ -377,10 +345,6 @@ namespace Edgegap.Editor
 
             _containerUseCustomRegistryToggle.UnregisterValueChangedCallback(onContainerUseCustomRegistryToggle);
             _containerPortNumInput.UnregisterCallback<FocusOutEvent>(onContainerPortNumInputFocusOut);
-            
-            // Dirty deployment connection action btn workarounds (from legacy code)
-            _deploymentConnectionServerActionStopBtn.clickable.clicked -= StartServerCallback;
-            _deploymentConnectionServerActionStopBtn.clickable.clicked -= StopServerCallback;
         }
 
         /// <summary>
@@ -399,8 +363,7 @@ namespace Edgegap.Editor
             _containerBuildAndPushServerBtn.clickable.clicked += onContainerBuildAndPushServerBtnClickAsync;
             
             _deploymentsRefreshBtn.clickable.clicked += onDeploymentsRefreshBtnClick;
-            _deploymentCreateBtn.clickable.clicked += onDeploymentCreateBtnClick;
-            _deploymentConnectionServerActionStopBtn.clickable.clicked += onDeploymentServerActionStopBtnClick;
+            _deploymentsCreateBtn.clickable.clicked += onDeploymentCreateBtnClick;
             
             _footerDocumentationBtn.clickable.clicked += onFooterDocumentationBtnClick;
             _footerNeedMoreGameServersBtn.clickable.clicked += onFooterNeedMoreGameServersBtnClick;
@@ -423,8 +386,7 @@ namespace Edgegap.Editor
             _containerBuildAndPushServerBtn.clickable.clicked -= onContainerBuildAndPushServerBtnClickAsync;
             
             _deploymentsRefreshBtn.clickable.clicked -= onDeploymentsRefreshBtnClick;
-            _deploymentCreateBtn.clickable.clicked -= onDeploymentCreateBtnClick;
-            _deploymentConnectionServerActionStopBtn.clickable.clicked -= onDeploymentServerActionStopBtnClick;
+            _deploymentsCreateBtn.clickable.clicked -= onDeploymentCreateBtnClick;
             
             _footerDocumentationBtn.clickable.clicked -= onFooterDocumentationBtnClick;
             _footerNeedMoreGameServersBtn.clickable.clicked -= onFooterNeedMoreGameServersBtnClick;
@@ -433,19 +395,28 @@ namespace Edgegap.Editor
         private void initToggleDynamicUi()
         {
             hideResultLabels();
-            loadApiTokenFromBase64Pref();
+            loadPersistentDataFromPlayerPrefs();
             _debugBtn.visible = EdgegapWindowMetadata.SHOW_DEBUG_BTN;
         }
 
         /// <summary>
-        /// Load ApiToken from PlayerPrefs. !persisted via ViewDataKey so we don't save
-        /// plaintext; base64 is at least better than nothing.
+        /// Load from PlayerPrefs, persisting from a previous session:
+        /// - ApiToken; !persisted via ViewDataKey so we don't save plaintext
+        /// - DeploymentRequestId
         /// </summary>
-        private void loadApiTokenFromBase64Pref()
+        private void loadPersistentDataFromPlayerPrefs()
         {
-            string apiTokenBase64Str = PlayerPrefs.GetString(EdgegapWindowMetadata.API_TOKEN_KEY_STR_PREF_ID, null);
-            if (apiTokenBase64Str != null)
-                _apiTokenInput.SetValueWithoutNotify(Base64Decode(apiTokenBase64Str));
+            // ApiToken
+            if (string.IsNullOrEmpty(_apiTokenInput.value))
+            {
+                string apiTokenBase64Str = PlayerPrefs.GetString(EdgegapWindowMetadata.API_TOKEN_KEY_STR_PREF_ID, null);
+                if (apiTokenBase64Str != null)
+                    _apiTokenInput.SetValueWithoutNotify(Base64Decode(apiTokenBase64Str));
+            }
+            
+            // DeploymentRequestId
+            if (string.IsNullOrEmpty(_deploymentRequestId))
+                _deploymentRequestId = PlayerPrefs.GetString(EdgegapWindowMetadata.DEPLOYMENT_REQUEST_ID_KEY_STR_PREF_ID);
         }
         
         /// <summary>For example, result labels (success/err) should be hidden on init</summary>
@@ -453,6 +424,7 @@ namespace Edgegap.Editor
         {
             _appCreateResultLabel.visible = false;
             _containerBuildAndPushResultLabel.visible = false;
+            _deploymentsStatusLabel.style.display = DisplayStyle.None;
         }
         
         
@@ -547,8 +519,7 @@ namespace Edgegap.Editor
         }
 
         private bool checkHasAppName() => _appNameInput.value.Length > 0;
-        private void onDeploymentsRefreshBtnClick() => _ = updateServerStatusAsync();
-        private void onDeploymentServerActionStopBtnClick() => _ = stopServerCallbackAsync();
+        private void onDeploymentsRefreshBtnClick() => _ = refreshDeploymentsAsync();
         private void onFooterDocumentationBtnClick() => openDocumentationWebsite();
         private void onFooterNeedMoreGameServersBtnClick() => openNeedMoreGameServersWebsite();
         
@@ -577,12 +548,6 @@ namespace Edgegap.Editor
             _appIconSpriteObjInput.value = _appIconSpriteObj;
             _containerCustomRegistryWrapper.SetEnabled(_containerUseCustomRegistryToggle.value);
             _containerUseCustomRegistryToggle.value = _containerUseCustomRegistryToggle.value;
-
-            // _appVersionNameInput.value = _appVersionName; // TODO: Hard-coded while unused in v2 UI
-            // _apiEnvironmentSelect.value = _apiEnvironment; // TODO: Hard-coded while unused in v2 UI
-            
-            // _containerImageTagInput.value = _containerImageTag; // TODO: Unused in V2 UI
-            // _autoIncrementTagInput.value = _autoIncrementTag;  // TODO: Unused in V2 UI
             
             // Only enable certain elements if appName exists
             bool hasAppName = checkHasAppName();
@@ -837,12 +802,8 @@ namespace Edgegap.Editor
             _apiTokenVerifyBtn.SetEnabled(false);
             SyncContainerEnablesToState();
             hideResultLabels();
-                
-            EdgegapWizardApi wizardApi = new EdgegapWizardApi(
-                EdgegapWindowMetadata.API_ENVIRONMENT, 
-                _apiTokenInput.value.Trim(),
-                EdgegapWindowMetadata.LOG_LEVEL);
-            
+
+            EdgegapWizardApi wizardApi = getWizardApi();
             EdgegapHttpResult initQuickStartResultCode = await wizardApi.InitQuickStart();
 
             _apiTokenVerifyBtn.SetEnabled(true);
@@ -945,7 +906,7 @@ namespace Edgegap.Editor
             Application.OpenURL(EdgegapWindowMetadata.EDGEGAP_GET_A_TOKEN_URL);
         }
         
-        /// <returns>isSuccess; sets _isContainerRegistryReady + loadedApp</returns>
+        /// <returns>isSuccess; sets _isContainerRegistryReady + _loadedApp</returns>
         private async Task<bool> GetAppAsync()
         {
             if (IsLogLevelDebug) Debug.Log("GetAppAsync");
@@ -960,12 +921,8 @@ namespace Edgegap.Editor
                 EdgegapWindowMetadata.LOADING_RICH_STR, 
                 EdgegapWindowMetadata.StatusColors.Processing);
             _appCreateResultLabel.visible = true;
-            
-            EdgegapAppApi appApi = new EdgegapAppApi(
-                EdgegapWindowMetadata.API_ENVIRONMENT, 
-                _apiTokenInput.value.Trim(),
-                EdgegapWindowMetadata.LOG_LEVEL);
-            
+
+            EdgegapAppApi appApi = getAppApi();
             EdgegapHttpResult<GetCreateAppResult> getAppResult = await appApi.GetApp(_appNameInput.value);
             onGetCreateApplicationResult(getAppResult);
 
@@ -975,7 +932,6 @@ namespace Edgegap.Editor
         /// <summary>
         /// TODO: Add err handling for reaching app limit (max 2 for free tier).
         /// </summary>
-        /// <exception cref="NotImplementedException"></exception>
         private async Task createAppAsync()
         {
             if (IsLogLevelDebug) Debug.Log("createAppAsync");
@@ -984,12 +940,8 @@ namespace Edgegap.Editor
             hideResultLabels();
             _appCreateBtn.SetEnabled(false);
             _apiTokenVerifyBtn.SetEnabled(false);
-            
-            EdgegapAppApi appApi = new EdgegapAppApi(
-                EdgegapWindowMetadata.API_ENVIRONMENT, 
-                _apiTokenInput.value.Trim(),
-                EdgegapWindowMetadata.LOG_LEVEL);
 
+            EdgegapAppApi appApi = getAppApi();
             CreateAppRequest createAppRequest = new(
                 _appNameInput.value,
                 isActive: true,
@@ -999,14 +951,14 @@ namespace Edgegap.Editor
             onGetCreateApplicationResult(createAppResult);
         }
 
-        /// <summary>Get || Create results both handled here. On success, sets _isContainerRegistryReady + loadedApp data</summary>
+        /// <summary>Get || Create results both handled here. On success, sets _isContainerRegistryReady + _loadedApp data</summary>
         /// <param name="result"></param>
         private void onGetCreateApplicationResult(EdgegapHttpResult<GetCreateAppResult> result)
         {
             // Assert the result itself || result's create time exists
             bool isSuccess = result.IsResultCode200 || result.IsResultCode409; // 409 == app already exists
             _isContainerRegistryReady = isSuccess;
-            loadedApp = result.Data;
+            _loadedApp = result.Data;
 
             _appCreateResultLabel.text = getFriendlyCreateAppResultStr(result);
             _containerRegistryFoldout.value = _isContainerRegistryReady;
@@ -1019,9 +971,9 @@ namespace Edgegap.Editor
             _appCreateResultLabel.visible = IsInitd;
             
             // App base64 img? Parse to sprite, overwrite app image UI/cache
-            if (!string.IsNullOrEmpty(loadedApp.Image))
+            if (!string.IsNullOrEmpty(_loadedApp.Image))
             {
-                _appIconSpriteObj = getSpriteFromBase64Str(loadedApp.Image);
+                _appIconSpriteObj = getSpriteFromBase64Str(_loadedApp.Image);
                 _appIconSpriteObjInput.value = _appIconSpriteObj;
             }
             
@@ -1029,10 +981,14 @@ namespace Edgegap.Editor
             bool isCreate = result.HttpMethod == HttpMethod.Post;
             bool isCreateFailAppNumCapMaxed = isCreate && !_isContainerRegistryReady && result.IsResultCode400;
             if (isCreateFailAppNumCapMaxed)
-            {
-                ButtonShaker shaker = new ButtonShaker(_footerNeedMoreGameServersBtn);
-                _ = shaker.ApplyShakeAsync();
-            }
+                shakeNeedMoreGameServersBtn();
+        }
+
+        /// <summary>Slight animation shake</summary>
+        private void shakeNeedMoreGameServersBtn()
+        {
+            ButtonShaker shaker = new ButtonShaker(_footerNeedMoreGameServersBtn);
+            _ = shaker.ApplyShakeAsync();
         }
         
         /// <returns>Generally "Success" || "Error: {error}" || "Warning: {error}"</returns>
@@ -1065,12 +1021,8 @@ namespace Edgegap.Editor
         }
 
         /// <summary>Open contact form in desired locale</summary>
-        private void openNeedMoreGameServersWebsite()
-        {
-            //// TODO: Localized contact form
-            // bool isFrenchLocale = Application.systemLanguage == SystemLanguage.French;
+        private void openNeedMoreGameServersWebsite() =>
             Application.OpenURL(EdgegapWindowMetadata.EDGEGAP_CONTACT_EN_URL);
-        }
         
         private void openDocumentationWebsite()
         {
@@ -1081,8 +1033,16 @@ namespace Edgegap.Editor
             else
             {
                 string apiEnvName = Enum.GetName(typeof(ApiEnvironment), _apiEnvironment);
-                Debug.LogWarning($"Could not open documentation for api environment {apiEnvName}: No documentation URL.");
+                Debug.LogWarning($"Could not open documentation for api environment " +
+                    $"{apiEnvName}: No documentation URL.");
             }
+        }
+
+        private async Task refreshDeploymentsAsync()
+        {
+            throw new NotImplementedException("TODO: refreshDeploymentsAsync");
+            if (IsLogLevelDebug) Debug.Log("refreshDeploymentsAsync");
+            hideResultLabels();
         }
         
         /// <summary>
@@ -1093,224 +1053,210 @@ namespace Edgegap.Editor
             // Hide previous result labels, disable btns (to reenable when done)
             if (IsLogLevelDebug) Debug.Log("createDeploymentStartServerAsync");
             hideResultLabels();
-            _deploymentCreateBtn.SetEnabled(false);
-            SetToolUIState(ToolState.ProcessingDeployment);
+            _deploymentsCreateBtn.SetEnabled(false);
+            _deploymentsConnectionUrlLabel.text = "";
+            _deploymentsConnectionStatusLabel.text = EdgegapWindowMetadata.WrapRichTextInColor(
+                EdgegapWindowMetadata.DEPLOY_REQUEST_RICH_STR, 
+                EdgegapWindowMetadata.StatusColors.Processing);
 
             try
             {
-                EdgegapDeploymentsApi deployApi = new(
-                    EdgegapWindowMetadata.API_ENVIRONMENT, 
-                    _apiTokenInput.value.Trim(),
-                    EdgegapWindowMetadata.LOG_LEVEL);
+                EdgegapDeploymentsApi deployApi = getDeployApi();
+
+                // Get (+cache) external IP async, required to create a deployment. Prioritize cache.
+                _userExternalIp = await getExternalIpAddress();
 
                 CreateDeploymentRequest createDeploymentReq = new(
                     _appNameInput.value,
-                    _containerNewTagVersionInput.value);
-            
-                // Deploy => Every 2s check status =>
-                // Meanwhile, we'll get the users' external IP address async for use later =>
-                var createDeploymentResponseTask = deployApi.CreateDeploymentAwaitReadyStatusAsync(
-                    createDeploymentReq, 
-                    pollInterval: TimeSpan.FromSeconds(2));
+                    _containerNewTagVersionInput.value,
+                    _userExternalIp);
                 
-                // Get the users' external IP address async for use later =>
-                EdgegapIpApi ipApi = new(
-                    EdgegapWindowMetadata.API_ENVIRONMENT, 
-                    _apiTokenInput.value.Trim(),
-                    EdgegapWindowMetadata.LOG_LEVEL);
+                // Request to deploy (it won't be active, yet) =>
+                EdgegapHttpResult<CreateDeploymentResult> createDeploymentResponse =
+                    await deployApi.CreateDeploymentAsync(createDeploymentReq);
 
-                var getYourPublicIpResponseTask = ipApi.GetYourPublicIp();
-                
-                // Await these 2 Tasks =>
-                await Task.WhenAll(createDeploymentResponseTask, getYourPublicIpResponseTask);
-                
-                // Get the results
-                EdgegapHttpResult<CreateDeploymentResult> createDeploymentResponse = createDeploymentResponseTask.Result;
-                EdgegapHttpResult<GetYourPublicIpResult> getYourPublicIpResponse = getYourPublicIpResponseTask.Result;
-                
-                // IP: Cache for later
-                _userExternalIp = getYourPublicIpResponse?.Data?.PublicIp;
-                if (string.IsNullOrEmpty(_userExternalIp))
-                    throw new NullReferenceException("Expected getYourPublicIpResponse.Data.PublicIp; TODO: Set UI err");
-                
-                // Create Deployment: Success?
-                bool isSuccess = !createDeploymentResponse.IsResultCode200;
-                if (!isSuccess)
-                    throw new NullReferenceException("Expected createDeploymentResponse.IsResultCode200; TODO: Set UI err");
+                if (!createDeploymentResponse.IsResultCode200)
+                    onCreateDeploymentStartServerError(createDeploymentResponse);
+                else
+                {
+                    // Update status
+                    _deploymentsConnectionStatusLabel.text = EdgegapWindowMetadata.WrapRichTextInColor(
+                        "<i>Deploying...</i>", EdgegapWindowMetadata.StatusColors.Processing);
+                }
 
-                throw new NotImplementedException("TODO: Handle Window createDeploymentResponse success");
+                // Check the status of the deployment for READY every 2s =>
+                const int pollIntervalSecs = EdgegapWindowMetadata.DEPLOYMENT_READY_STATUS_POLL_SECONDS;
+                _ = await deployApi.AwaitReadyStatusAsync(
+                    createDeploymentResponse.Data.RequestId,
+                    TimeSpan.FromSeconds(pollIntervalSecs));
+
+                // Process create deployment response
+                bool isSuccess = createDeploymentResponse.IsResultCode200;
+                if (isSuccess)
+                    onCreateDeploymentStartServerSuccess(createDeploymentResponse.Data);
+                else
+                    onCreateDeploymentStartServerError(createDeploymentResponse);
+                
+                _deploymentsStatusLabel.style.display = DisplayStyle.Flex;
             }
             finally
             {
-                _deploymentCreateBtn.SetEnabled(false);
+                _deploymentsCreateBtn.SetEnabled(true);
             }
         }
-        
-        
-        #region Untested Legacy V1 Code
-        private readonly System.Timers.Timer _updateServerStatusCronjob = 
-            new(EdgegapWindowMetadata.SERVER_STATUS_CRON_JOB_INTERVAL_MS);
-        
-        private bool _shouldUpdateServerStatus = false;
-        // private string _deploymentRequestId; // Moved to v2 top
-        // private string _userExternalIp; // Moved to v2 top
-        // [SerializeField] private bool _autoIncrementTag = true; // TODO? Used by v1 api
-        // [SerializeField] private string _containerImageTag; // TODO? Used by v1 api
-        
-        // private void loadRegisterInitServerDataUiElements()
-        // {
-        //     VisualElement serverDataElement = EdgegapServerDataManager.GetServerDataVisualTree();
-        //     EdgegapServerDataManager.RegisterServerDataContainer(serverDataElement);
-        //     
-        //     _deploymentServerDataContainer.Clear();
-        //     _deploymentServerDataContainer.Add(serverDataElement);
-        // }
-        
-        // protected void OnDestroy()
-        // {
-        //     bool deploymentActive = !string.IsNullOrEmpty(_deploymentRequestId);
-        //
-        //     if (!deploymentActive)
-        //         return;
-        //     
-        //     EditorUtility.DisplayDialog(
-        //         "Warning",
-        //         $"You have an active deployment ({_deploymentRequestId}) that won't be stopped automatically.",
-        //         "Ok"
-        //     );
-        // }
-        
-        // protected void Update()
-        // {
-        //     if (!_shouldUpdateServerStatus)
-        //         return;
-        //     
-        //     _shouldUpdateServerStatus = false;
-        //     updateServerStatusAsync();
-        // }
-        
-        // private void RestoreActiveDeployment()
-        // {
-        //     ConnectCallback();
-        //
-        //     _shouldUpdateServerStatus = true;
-        //     StartServerStatusCronjob();
-        // }
-        
-        // /// <summary>Old "Verify" btn from legacy v1?</summary>
-        // /// <param name="selectedApiEnvironment"></param>
-        // /// <param name="selectedAppName"></param>
-        // /// <param name="selectedAppVersionName"></param>
-        // /// <param name="selectedApiTokenValue"></param>
-        // [Obsolete("If verifying, apiToken, see v2's verifyApiTokenGetRegistryCredsAsync()")]
-        // private async void Connect(
-        //     ApiEnvironment selectedApiEnvironment,
-        //     string selectedAppName,
-        //     string selectedAppVersionName,
-        //     string selectedApiTokenValue
-        // )
-        // {
-        //     SetToolUIState(ToolState.Connecting);
-        //
-        //     _httpClient.BaseAddress = new Uri(selectedApiEnvironment.GetApiUrl());
-        //
-        //     string path = $"/v1/app/{selectedAppName}/version/{selectedAppVersionName}";
-        //
-        //     // Headers
-        //     _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-        //     _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("token", selectedApiTokenValue);
-        //
-        //     // Make HTTP request
-        //     HttpResponseMessage response = await _httpClient.GetAsync(path);
-        //
-        //     if (response.IsSuccessStatusCode)
-        //     {
-        //         SyncObjectWithForm();
-        //         SetToolUIState(ToolState.Connected);
-        //     }
-        //     else
-        //     {
-        //         int status = (int)response.StatusCode;
-        //         string title;
-        //         string message;
-        //
-        //         if (status == 401)
-        //         {
-        //             string apiEnvName = Enum.GetName(typeof(ApiEnvironment), selectedApiEnvironment);
-        //             title = "Invalid credentials";
-        //             message = $"Could not find an Edgegap account with this API key for the {apiEnvName} environment.";
-        //         }
-        //         else if (status == 404)
-        //         {
-        //             title = "App not found";
-        //             message = $"Could not find app {selectedAppName} with version {selectedAppVersionName}.";
-        //         }
-        //         else
-        //         {
-        //             title = "Oops";
-        //             message = $"There was an error while connecting you to the Edgegap API. Please try again later.";
-        //         }
-        //
-        //         EditorUtility.DisplayDialog(title, message, "Ok");
-        //         SetToolUIState(ToolState.Disconnected);
-        //     }
-        // }
-        
-        // private void ConnectCallback()
-        // {
-        //     string selectedAppName = _appNameInput.value;
-        //     string selectedVersionName = _appVersionName; // TODO: Hard-coded while unused in UI
-        //     string selectedApiKey = _apiTokenInputUnmasked.Value;
-        //
-        //     bool validAppName = !string.IsNullOrEmpty(selectedAppName) && !string.IsNullOrWhiteSpace(selectedAppName);
-        //     bool validVersionName = !string.IsNullOrEmpty(selectedVersionName) && !string.IsNullOrWhiteSpace(selectedVersionName);
-        //     bool validApiKey = selectedApiKey.StartsWith("token ");
-        //     bool isValidToConnect = validAppName && validVersionName && validApiKey; 
-        //     
-        //     if (!isValidToConnect)
-        //     {
-        //         EditorUtility.DisplayDialog(
-        //             "Could not connect - Invalid data",
-        //             "The data provided is invalid. " +
-        //             "Make sure every field is filled, and that you provide your complete Edgegap API token " +
-        //             "(including the \"token\" part).", 
-        //             "Ok"
-        //         );
-        //         return;
-        //     }
-        //
-        //     string apiKeyValue = selectedApiKey.Substring(6);
-        //     Connect(_apiEnvironment, selectedAppName, selectedVersionName, apiKeyValue);
-        // }
-        
-        /// <summary>
-        /// With a call to an external resource, determines the current user's public IP address.
-        /// </summary>
-        /// <returns>External IP address</returns>
-        private string GetExternalIpAddress()
-        {
-            string externalIpString = new WebClient()
-                .DownloadString("https://icanhazip.com")
-                .Replace("\\r\\n", "")
-                .Replace("\\n", "")
-                .Trim();
-            IPAddress externalIp = IPAddress.Parse(externalIpString);
 
-            return externalIp.ToString();
+        private void onCreateDeploymentStartServerSuccess(CreateDeploymentResult result)
+        {
+            // Success
+            hideResultLabels();
+            _deploymentsStatusLabel.text = EdgegapWindowMetadata.WrapRichTextInColor(
+                "Success", EdgegapWindowMetadata.StatusColors.Success);
+            _deploymentsStatusLabel.visible = true;
+            
+            // Cache the deployment result -> persist the requestId
+            _lastDeploymentCreated = result;
+            _deploymentRequestId = result.RequestId;
+            PlayerPrefs.SetString(EdgegapWindowMetadata.DEPLOYMENT_REQUEST_ID_KEY_STR_PREF_ID, _deploymentRequestId);
+
+            // TODO: This will be dynamically inserted via MVC-style template
+            // Set the static connection row label data
+            _deploymentsConnectionUrlLabel.text = result.RequestDns;
+            _deploymentsConnectionStatusLabel.text = EdgegapWindowMetadata.WrapRichTextInColor(
+                $"Deployed ({_deploymentRequestId})",
+                EdgegapWindowMetadata.StatusColors.Success);
+            
+            // Configure + show stop button
+            _deploymentsConnectionStopBtn.style.display = DisplayStyle.Flex;
+            _deploymentsConnectionStopBtn.clickable.clickedWithEventInfo += onDynamicStopServerBtnAsync; // Unsubscribes on click
+            _deploymentsConnectionStopBtn.visible = true;
         }
 
-        // private void DisconnectCallback()
-        // {
-        //     if (string.IsNullOrEmpty(_deploymentRequestId))
-        //         SetToolUIState(ToolState.Disconnected);
-        //     else
-        //     {
-        //         EditorUtility.DisplayDialog(
-        //             "Cannot disconnect", 
-        //             "Make sure no server is running in the Edgegap tool before disconnecting", 
-        //             "Ok");
-        //     }
-        // }
+        /// <summary>
+        /// This is triggered from a dynamic button, so we need to pass in the event info (TODO: Use evt info later).
+        /// </summary>
+        /// <param name="evt"></param>
+        private void onDynamicStopServerBtnAsync(EventBase evt) => 
+            _ = onDynamicStopServerAsync();
+
+        /// <summary>
+        /// Stops the deployment, updating the UI accordingly.
+        /// TODO: Cache a list of deployments and/or store a hidden field for requestId.
+        /// </summary>
+        private async Task onDynamicStopServerAsync()
+        {
+            // Prepare to stop (UI, status flags, callback unsubs)
+            if (IsLogLevelDebug) Debug.Log("onDynamicStopServerAsync");
+            hideResultLabels();
+            _deploymentsConnectionStopBtn.SetEnabled(false);
+            _deploymentsConnectionStatusLabel.text = EdgegapWindowMetadata.WrapRichTextInColor(
+                "<i>Requesting Stop...</i>",
+                EdgegapWindowMetadata.StatusColors.Processing);
+            
+            EdgegapDeploymentsApi deployApi = getDeployApi();
+            EdgegapHttpResult<StopActiveDeploymentResult> stopResponse = null;
+
+            try
+            {
+                stopResponse = await deployApi.StopActiveDeploymentAsync(_deploymentRequestId);
+
+                if (!stopResponse.IsResultCode200)
+                {
+                    onDynamicStopServerAsyncFail(stopResponse.Error.ErrorMessage);
+                    return;
+                }
+                
+                // ---------
+                // 200, but only PENDING deleted (if we create a new one before it's deleted,
+                //   user may get hit with max # of deployments reached err)
+                _deploymentsConnectionStatusLabel.text = EdgegapWindowMetadata.WrapRichTextInColor(
+                    "<i>Stopping...</i>",
+                    EdgegapWindowMetadata.StatusColors.Warn);
+
+                TimeSpan pollIntervalSecs = TimeSpan.FromSeconds(EdgegapWindowMetadata.DEPLOYMENT_STOP_STATUS_POLL_SECONDS);
+                stopResponse = await deployApi.AwaitTerminatedDeleteStatusAsync(_deploymentRequestId, pollIntervalSecs);
+            }
+            finally
+            {
+                _deploymentsConnectionStopBtn.clickable.clickedWithEventInfo -= onDynamicStopServerBtnAsync;
+            }
+
+            bool isStopSuccess = stopResponse.IsResultCode410;
+            if (!isStopSuccess)
+            {
+                onDynamicStopServerAsyncFail(stopResponse.Error.ErrorMessage);
+                return;
+            }
+            else
+            {
+                // Success: Hide the static row // TODO: Delete the template row, when dynamic
+                _deploymentsConnectionUrlLabel.text = "";
+                _deploymentsConnectionStatusLabel.text = "";
+                _deploymentsConnectionStopBtn.visible = false;
+            }
+        }
+
+        private void onDynamicStopServerAsyncFail(string friendlyErrMsg)
+        {
+            _deploymentsConnectionStatusLabel.text = EdgegapWindowMetadata.WrapRichTextInColor(
+                friendlyErrMsg, EdgegapWindowMetadata.StatusColors.Error);
+        }
+
+        private void onCreateDeploymentStartServerError(EdgegapHttpResult<CreateDeploymentResult> result)
+        {
+            _deploymentsConnectionStopBtn.visible = false;
+            _deploymentsConnectionUrlLabel.text = "";
+            _deploymentsConnectionStatusLabel.text = EdgegapWindowMetadata.WrapRichTextInColor(
+                "Failed to Start",
+                EdgegapWindowMetadata.StatusColors.Error);
+            
+            _deploymentsStatusLabel.text = EdgegapWindowMetadata.WrapRichTextInColor(
+                result.Error.ErrorMessage,
+                EdgegapWindowMetadata.StatusColors.Error);
+            _deploymentsStatusLabel.style.display = DisplayStyle.Flex;
+
+            if (result.IsResultCode403)
+                shakeNeedMoreGameServersBtn();
+        }
+
+        /// <summary>Sets and returns `_userExternalIp`, prioritizing local cache</summary>
+        private async Task<string> getExternalIpAddress()
+        {
+            if (!string.IsNullOrEmpty(_userExternalIp))
+                return _userExternalIp;
+
+            EdgegapIpApi ipApi = getIpApi();
+            EdgegapHttpResult<GetYourPublicIpResult> getYourPublicIpResponseTask = await ipApi.GetYourPublicIp();
+            
+            _userExternalIp = getYourPublicIpResponseTask?.Data?.PublicIp;
+            Assert.IsTrue(!string.IsNullOrEmpty(_userExternalIp), 
+                $"Expected getYourPublicIpResponseTask.Data.PublicIp");
+            
+            return _userExternalIp;
+        }
+        
+        #region Api Builders
+        private EdgegapDeploymentsApi getDeployApi() => new(
+            EdgegapWindowMetadata.API_ENVIRONMENT,
+            _apiTokenInput.value.Trim(),
+            EdgegapWindowMetadata.LOG_LEVEL);
+        
+        private EdgegapIpApi getIpApi() => new(
+            EdgegapWindowMetadata.API_ENVIRONMENT, 
+            _apiTokenInput.value.Trim(),
+            EdgegapWindowMetadata.LOG_LEVEL);
+        
+        private EdgegapWizardApi getWizardApi() => new(
+            EdgegapWindowMetadata.API_ENVIRONMENT, 
+            _apiTokenInput.value.Trim(),
+            EdgegapWindowMetadata.LOG_LEVEL);
+        
+        private EdgegapAppApi getAppApi() => new(
+            EdgegapWindowMetadata.API_ENVIRONMENT, 
+            _apiTokenInput.value.Trim(),
+            EdgegapWindowMetadata.LOG_LEVEL);
+        #endregion // Api Builders
+
+
 
         private float ProgressCounter = 0;
 
@@ -1372,7 +1318,6 @@ namespace Edgegap.Editor
                         imageName,
                         tag,
                         ShowBuildWorkInProgress);
-                    SetToolUIState(ToolState.Pushing);
                 }
                 else
                     Debug.LogWarning(nameof(EdgegapWindowMetadata.SKIP_DOCKER_IMAGE_BUILD_WHEN_PUSHING));
@@ -1409,7 +1354,7 @@ namespace Edgegap.Editor
 
                 // update edgegap server settings for new tag
                 ShowBuildWorkInProgress("Updating server info on Edgegap");
-                EdgegapAppApi appApi = new(_apiEnvironment, _apiTokenInput.value);
+                EdgegapAppApi appApi = getAppApi();
 
                 PortsData[] ports =
                 {
@@ -1465,7 +1410,6 @@ namespace Edgegap.Editor
             // _containerImageTag = tag; // TODO?
             syncFormWithObjectStatic();
             EditorUtility.ClearProgressBar();
-            SetToolUIState(ToolState.Connected);
             
             _containerBuildAndPushResultLabel.text = $"Success ({tag})";
             _containerBuildAndPushResultLabel.visible = true;
@@ -1476,400 +1420,10 @@ namespace Edgegap.Editor
         /// <summary>(v2) Docker cmd error, detected by "ERROR" in log stream.</summary>
         private void onBuildPushError(string msg)
         {
-            SetToolUIState(ToolState.Connected);
             EditorUtility.ClearProgressBar();
             _containerBuildAndPushResultLabel.text = EdgegapWindowMetadata.WrapRichTextInColor(
                 "Error", EdgegapWindowMetadata.StatusColors.Error);
             EditorUtility.DisplayDialog("Error", msg, "Ok"); // Show this last! It's blocking!
         }
-        
-        // [Obsolete("Use EdgegapAppApi.UpdateAppVersion")]
-        // /// <summary>
-        // /// Legacy code, slightly edited to accommodate v2.
-        // /// TODO: Revamp to use ApiBase scripts.
-        // /// </summary>
-        // /// <param name="newTag"></param>
-        // /// <exception cref="Exception"></exception>
-        // private async Task updateAppTagOnEdgegap(string newTag)
-        // {
-        //     string relativePath = $"/v1/app/{_appNameInput.value}/version/{_appVersionName}";
-        //
-        //     // Setup post data
-        //     AppVersionUpdatePatchData updatePatchData = new AppVersionUpdatePatchData
-        //     {
-        //         DockerImage = _containerImageRepositoryInput.value, 
-        //         DockerRepository = _containerRegistryUrlInput.value, 
-        //         DockerTag = newTag,
-        //     };
-        //     string json = JsonConvert.SerializeObject(updatePatchData);
-        //     StringContent patchData = new StringContent(json, Encoding.UTF8, "application/json");
-        //
-        //     // Make HTTP request
-        //     string fullUri = _apiEnvironment.GetApiUrl() + relativePath;
-        //     HttpRequestMessage request = new HttpRequestMessage(new HttpMethod("PATCH"), fullUri);
-        //     request.Content = patchData;
-        //
-        //     HttpResponseMessage response = await _httpClient.SendAsync(request);
-        //     string content = await response.Content.ReadAsStringAsync();
-        //
-        //     if (!response.IsSuccessStatusCode)
-        //     {
-        //         throw new Exception($"Could not update Edgegap server tag. " +
-        //             $"Got {(int)response.StatusCode} with response:\n{content}");
-        //     }
-        // }
-
-        /// <summary>Legacy from v1 - untested</summary>
-        [Obsolete("Use createDeploymentStartServerAsync")]
-        private async Task startServerCallbackAsync()
-        {
-            if (IsLogLevelDebug) Debug.Log("startServerCallbackAsync");
-            hideResultLabels();
-            
-            SetToolUIState(ToolState.ProcessingDeployment); // Prevents being called multiple times.
-
-            const string path = "/v1/deploy";
-            
-            // Setup post data
-            DeployPostData deployPostData = new DeployPostData(
-                _appNameInput.value, 
-                _containerNewTagVersionInput.value, 
-                new List<string> { _userExternalIp });
-            
-            string json = JsonConvert.SerializeObject(deployPostData);
-            StringContent postData = new StringContent(json, Encoding.UTF8, "application/json");
-
-            // Make HTTP request
-            HttpResponseMessage response = await _httpClient.PostAsync(path, postData);
-            string content = await response.Content.ReadAsStringAsync();
-
-            if (response.IsSuccessStatusCode)
-            {
-                // Parse response
-                Deployment parsedResponse = JsonConvert.DeserializeObject<Deployment>(content);
-
-                _deploymentRequestId = parsedResponse.RequestId;
-
-                updateServerStatusAsync();
-                StartServerStatusCronjob();
-            }
-            else
-            {
-                Debug.LogError($"Could not start Edgegap server. " +
-                    $"Got {(int)response.StatusCode} with response:\n{content}");
-                SetToolUIState(ToolState.Connected);
-            }
-        }
-
-        /// <summary>Legacy from v1 - untested</summary>
-        private async Task stopServerCallbackAsync()
-        {
-            throw new NotImplementedException("TODO: stopServerCallbackAsync (legacy code not yet tested to be compatible with v2");
-            
-            if (IsLogLevelDebug) Debug.Log("stopServerCallbackAsync");
-            hideResultLabels();
-            
-            string path = $"/v1/stop/{_deploymentRequestId}";
-
-            // Make HTTP request
-            HttpResponseMessage response = await _httpClient.DeleteAsync(path);
-
-            if (response.IsSuccessStatusCode)
-            {
-                updateServerStatusAsync();
-                SetToolUIState(ToolState.ProcessingDeployment);
-            }
-            else
-            {
-                // Parse response
-                string content = await response.Content.ReadAsStringAsync();
-
-                Debug.LogError($"Could not stop Edgegap server. " +
-                    $"Got {(int)response.StatusCode} with response:\n{content}");
-            }
-        }
-
-        private void StartServerStatusCronjob()
-        {
-            _updateServerStatusCronjob.Elapsed += (sourceObject, elaspedEvent) => 
-                _shouldUpdateServerStatus = true;
-            
-            _updateServerStatusCronjob.AutoReset = true;
-            _updateServerStatusCronjob.Start();
-        }
-
-        private void StopServerStatusCronjob() => _updateServerStatusCronjob.Stop();
-
-        /// <summary>Legacy from v1 - untested</summary>
-        private async Task updateServerStatusAsync()
-        {
-            throw new NotImplementedException("TODO: updateServerStatusAsync (legacy code not yet tested to be compatible with v2");
-            
-            if (IsLogLevelDebug) Debug.Log("updateServerStatusAsync");
-            hideResultLabels();
-            
-            Status serverStatusResponse = await FetchServerStatus();
-
-            ToolState toolState;
-            ServerStatus serverStatus = serverStatusResponse.GetServerStatus();
-
-            if (serverStatus == ServerStatus.Terminated)
-            {
-                EdgegapServerDataManager.SetServerData(null, _apiEnvironment);
-
-                if (_updateServerStatusCronjob.Enabled)
-                {
-                    StopServerStatusCronjob();
-                }
-
-                _deploymentRequestId = null;
-                toolState = ToolState.Connected;
-            }
-            else
-            {
-                EdgegapServerDataManager.SetServerData(serverStatusResponse, _apiEnvironment);
-
-                toolState = serverStatus is ServerStatus.Ready or ServerStatus.Error 
-                    ? ToolState.DeploymentRunning 
-                    : ToolState.ProcessingDeployment;
-            }
-
-            SetToolUIState(toolState);
-        }
-
-        private async Task<Status> FetchServerStatus()
-        {
-            string path = $"/v1/status/{_deploymentRequestId}";
-
-            // Make HTTP request
-            HttpResponseMessage response = await _httpClient.GetAsync(path);
-
-            // Parse response
-            string content = await response.Content.ReadAsStringAsync();
-
-            Status parsedData;
-
-            if (response.IsSuccessStatusCode)
-            {
-                parsedData = JsonConvert.DeserializeObject<Status>(content);
-            }
-            else
-            {
-                if ((int)response.StatusCode == 400)
-                {
-                    Debug.LogError("The deployment that was active in the tool is now unreachable. " +
-                        "Considering it Terminated.");
-                    
-                    parsedData = new Status { CurrentStatus = ServerStatus.Terminated.GetLabelText() };
-                }
-                else
-                {
-                    Debug.LogError(
-                        $"Could not fetch status of Edgegap deployment {_deploymentRequestId}. " +
-                        $"Got {(int)response.StatusCode} with response:\n{content}"
-                    );
-                    parsedData = new Status { CurrentStatus = ServerStatus.NA.GetLabelText() };
-                }
-            }
-
-            return parsedData;
-        }
-
-        private void SetToolUIState(ToolState toolState)
-        {
-            SetConnectionInfoUI(toolState);
-            setServerActionUI(toolState); // Desync'd in V2
-            SetDockerRepoInfoUI(toolState);
-            // SetConnectionButtonUI(toolState); // Unused in v2
-        }
-        
-        /// <summary>
-        /// Legacy code, slightly edited to prevent syntax errs with V2. TODO: Use ApiBase.
-        /// </summary>
-        private void setServerActionUI(ToolState toolState)
-        {
-            bool canStartDeployment = toolState.CanStartDeployment();
-            bool canStopDeployment = toolState.CanStopDeployment();
-
-            // A bit dirty, but ensures the callback is not bound multiple times on the button.
-            _deploymentConnectionServerActionStopBtn.clickable.clicked -= StartServerCallback;
-            _deploymentConnectionServerActionStopBtn.clickable.clicked -= StopServerCallback;
-
-            _deploymentConnectionServerActionStopBtn.SetEnabled(canStartDeployment || canStopDeployment);
-            _containerBuildAndPushServerBtn.SetEnabled(canStartDeployment);
-
-            if (canStopDeployment)
-            {
-                _deploymentConnectionServerActionStopBtn.text = "Stop Server";
-                _deploymentConnectionServerActionStopBtn.clickable.clicked += StopServerCallback;
-            }
-        }
-
-        private void SetDockerRepoInfoUI(ToolState toolState)
-        {
-            bool connected = toolState.CanStartDeployment();
-            _containerRegistryUrlInput.SetEnabled(connected);
-            _containerImageRepositoryInput.SetEnabled(connected);
-            _containerBuildAndPushServerBtn.SetEnabled(connected);
-            
-            // // Unused in v2 >>
-            // _autoIncrementTagInput.SetEnabled(connected);
-            // _containerImageTagInput.SetEnabled(connected);
-        }
-        
-        private void SetServerActionUI(ToolState toolState)
-        {
-            bool canStartDeployment = toolState.CanStartDeployment();
-            bool canStopDeployment = toolState.CanStopDeployment();
-
-            // A bit dirty, but ensures the callback is not bound multiple times on the button.
-            _deploymentConnectionServerActionStopBtn.clickable.clicked -= StopServerCallback;
-
-            _deploymentConnectionServerActionStopBtn.SetEnabled(canStartDeployment || canStopDeployment);
-            _containerBuildAndPushServerBtn.SetEnabled(canStartDeployment);
-
-            if (canStopDeployment)
-                _deploymentConnectionServerActionStopBtn.clickable.clicked += StopServerCallback;
-        }
-        
-        /// <summary>
-        /// Legacy code, slightly edited to use explicit vars + prevent syntax errs with V2. TODO: Use ApiBase.
-        /// </summary>
-        private async void StartServerCallback()
-        {
-            SetToolUIState(ToolState.ProcessingDeployment); // Prevents being called multiple times.
-
-            const string path = "/v1/deploy";
-
-            // Setup post data
-            DeployPostData deployPostData = new DeployPostData(
-                _appNameInput.value, 
-                _containerNewTagVersionInput.value, 
-                new List<string> { _userExternalIp });
-            
-            string json = JsonConvert.SerializeObject(deployPostData);
-            StringContent postData = new StringContent(json, Encoding.UTF8, "application/json");
-
-            // Make HTTP request
-            HttpResponseMessage response = await _httpClient.PostAsync(path, postData);
-            string content = await response.Content.ReadAsStringAsync();
-
-            if (response.IsSuccessStatusCode)
-            {
-                // Parse response
-                Deployment parsedResponse = JsonConvert.DeserializeObject<Deployment>(content);
-
-                _deploymentRequestId = parsedResponse.RequestId;
-
-                UpdateServerStatus();
-                StartServerStatusCronjob();
-            }
-            else
-            {
-                Debug.LogError($"Could not start Edgegap server. " +
-                    $"Got {(int)response.StatusCode} with response:\n{content}");
-                
-                SetToolUIState(ToolState.Connected);
-            }
-        }
-        
-        /// <summary>
-        /// Legacy code, slightly edited to use explicit vars + prevent syntax errs with V2. TODO: Use ApiBase.
-        /// </summary>
-        private async void StopServerCallback()
-        {
-            string path = $"/v1/stop/{_deploymentRequestId}";
-
-            // Make HTTP request
-            HttpResponseMessage response = await _httpClient.DeleteAsync(path);
-
-            if (response.IsSuccessStatusCode)
-            {
-                UpdateServerStatus();
-                SetToolUIState(ToolState.ProcessingDeployment);
-            }
-            else
-            {
-                // Parse response
-                string content = await response.Content.ReadAsStringAsync();
-                Debug.LogError($"Could not stop Edgegap server. " +
-                    $"Got {(int)response.StatusCode} with response:\n{content}");
-            }
-        }
-        
-        /// <summary>
-        /// Legacy code, slightly edited to use explicit vars + prevent syntax errs with V2. TODO: Use ApiBase.
-        /// </summary>
-        private async void UpdateServerStatus()
-        {
-            Status serverStatusResponse = await FetchServerStatus();
-
-            ToolState toolState;
-            ServerStatus serverStatus = serverStatusResponse.GetServerStatus();
-
-            if (serverStatus == ServerStatus.Terminated)
-            {
-                EdgegapServerDataManager.SetServerData(null, _apiEnvironment);
-
-                if (_updateServerStatusCronjob.Enabled)
-                {
-                    StopServerStatusCronjob();
-                }
-
-                _deploymentRequestId = null;
-                toolState = ToolState.Connected;
-            }
-            else
-            {
-                EdgegapServerDataManager.SetServerData(serverStatusResponse, _apiEnvironment);
-
-                if (serverStatus is ServerStatus.Ready or ServerStatus.Error)
-                {
-                    toolState = ToolState.DeploymentRunning;
-                }
-                else
-                {
-                    toolState = ToolState.ProcessingDeployment;
-                }
-            }
-
-            SetToolUIState(toolState);
-        }
-
-        private void SetConnectionInfoUI(ToolState toolState)
-        {
-            bool canEditConnectionInfo = toolState.CanEditConnectionInfo();
-
-            _apiTokenInput.SetEnabled(canEditConnectionInfo);
-            _appNameInput.SetEnabled(canEditConnectionInfo);
-            
-            // // Unused in v2 >>
-            // _apiEnvironmentSelect.SetEnabled(canEditConnectionInfo);
-            // _appVersionNameInput.SetEnabled(canEditConnectionInfo);
-       
-        }
-
-        /// <summary>
-        /// Save the tool's serializable data to the EditorPrefs to allow persistence across restarts.
-        /// Any field with [SerializeField] will be saved.
-        /// </summary>
-        private void SaveToolData()
-        {
-            string data = JsonUtility.ToJson(this, false);
-            EditorPrefs.SetString(EdgegapWindowMetadata.EDITOR_DATA_SERIALIZATION_NAME, data);
-        }
-
-        /// <summary>
-        /// Load the tool's serializable data from the EditorPrefs to the object, restoring the tool's state.
-        /// </summary>
-        private void LoadToolData()
-        {
-            string data = EditorPrefs.GetString(
-                EdgegapWindowMetadata.EDITOR_DATA_SERIALIZATION_NAME, 
-                JsonUtility.ToJson(this, false));
-            
-            JsonUtility.FromJsonOverwrite(data, this);
-        }
-        #endregion // Untested Legacy V1 Code 
     }
 }
