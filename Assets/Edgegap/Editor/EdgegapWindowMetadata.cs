@@ -63,7 +63,6 @@ namespace Edgegap.Editor
         public const string EDGEGAP_GET_A_TOKEN_URL = "https://app.edgegap.com/?oneClick=true";
         public const string EDGEGAP_CONTACT_EN_URL = "https://edgegap.com/en/resources/contact";
         public const string EDGEGAP_HOW_TO_LOGIN_VIA_CLI_DOC_URL = "https://docs.edgegap.com/docs/container/edgegap-container-registry/#getting-your-credentials";
-        public const string EDITOR_DATA_SERIALIZATION_NAME = "EdgegapSerializationData";
         public const string DEFAULT_VERSION_TAG = "latest";
         public const string LOADING_RICH_STR = "<i>Loading...</i>";
         public const string PROCESSING_RICH_STR = "<i>Processing...</i>";

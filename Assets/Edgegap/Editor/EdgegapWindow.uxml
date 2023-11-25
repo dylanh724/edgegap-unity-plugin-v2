@@ -76,14 +76,14 @@
                 <ui:Label tabindex="-1" text="{DeploymentsStatusLabel}" parse-escape-sequences="true" display-tooltip-when-elided="true" name="DeploymentsStatusLabel" class="text-edgegap" style="color: rgb(138, 238, 140); white-space: normal; text-overflow: ellipsis; width: 650px; display: none; margin-left: 3px;" />
                 <ui:GroupBox name="DeploymentsHeadersGroupBox" class="container-row-parent" style="flex-direction: row; padding-top: 6px; padding-right: 0; padding-bottom: 3px; padding-left: 0; margin-bottom: 0; align-self: auto; justify-content: flex-start; align-items: center;">
                     <ui:Label name="DeploymentsConnectionStatusHeaderLabel" text="Status" style="flex-grow: 0.5; -unity-text-align: upper-left; -unity-font-style: bold; width: 75px;" />
-                    <ui:Label name="DeploymentsConnectionURLHeaderLabel" text="URL" style="flex-grow: 0.5; width: 150px; -unity-font-style: bold; align-items: auto; justify-content: flex-start; align-self: auto;" />
-                    <ui:Label name="DeploymentsConnectionControlHeaderLabel" text="Control" style="flex-grow: 0.5; -unity-text-align: upper-left; -unity-font-style: bold; width: 25px;" />
+                    <ui:Label name="DeploymentsConnectionURLHeaderLabel" text="URL" style="flex-grow: 0.5; width: 214px; -unity-font-style: bold; align-items: auto; justify-content: flex-start; align-self: auto; margin-left: 36px;" />
+                    <ui:Label name="DeploymentsConnectionControlHeaderLabel" text="Control" style="flex-grow: 0.5; -unity-text-align: upper-left; -unity-font-style: bold; padding-top: 0; padding-right: 0; padding-bottom: 0; padding-left: 70px;" />
                 </ui:GroupBox>
                 <ui:GroupBox name="DeploymentsConnectionGroupBox" style="flex-direction: row; padding-left: 0; align-items: center; align-self: stretch; justify-content: flex-start; height: 32px;">
                     <ui:Label name="DeploymentsConnectionStatusLabel" class="text--muted" style="flex-grow: 0.6; flex-direction: column; -unity-text-align: middle-left; justify-content: flex-start; align-items: center; width: 75px;" />
-                    <ui:Label name="DeploymentConnectionUrlLabel" class="text--muted" style="flex-grow: 0.5; margin-left: 0; padding-left: 0; -unity-text-align: middle-left; align-items: center; width: 150px;" />
-                    <ui:VisualElement name="DeploymentsConnectionServerStopHorizBtnHorizGroup" style="flex-grow: 1; flex-direction: row; align-items: center; justify-content: center; width: 50px;">
-                        <ui:Button name="DeploymentsConnectionServerStopBtn" text="Stop Server" class="button-edgegap text-edgegap" style="min-width: auto; width: 125px; max-width: none; visibility: visible; display: none;" />
+                    <ui:Label name="DeploymentConnectionUrlLabel" text="&#10;" class="text--muted" style="flex-grow: 0.5; margin-left: 0; padding-left: 0; -unity-text-align: middle-left; align-items: center; width: 200px;" />
+                    <ui:VisualElement name="DeploymentsConnectionServerStopHorizBtnHorizGroup" style="flex-grow: 1; flex-direction: row; align-items: center; justify-content: center;">
+                        <ui:Button name="DeploymentsConnectionServerStopBtn" text="Stop Server" class="button-edgegap text-edgegap" style="min-width: auto; width: 125px; max-width: none; visibility: visible; display: flex;" />
                     </ui:VisualElement>
                 </ui:GroupBox>
             </ui:Foldout>
