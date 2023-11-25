@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Edgegap.Editor.Api.Models.Requests;
 using Edgegap.Editor.Api.Models.Results;
+using UnityEngine.Assertions;
 
 namespace Edgegap.Editor.Api
 {
@@ -133,6 +134,8 @@ namespace Edgegap.Editor.Api
             string requestId, 
             TimeSpan pollInterval)
         {
+            Assert.IsTrue(!string.IsNullOrEmpty(requestId)); // Validate
+            
             EdgegapHttpResult<GetDeploymentStatusResult> statusResponse = null;
             CancellationTokenSource cts = new(TimeSpan.FromMinutes(
                 EdgegapWindowMetadata.DEPLOYMENT_AWAIT_READY_STATUS_TIMEOUT_MINS));

@@ -83,7 +83,7 @@
                     <ui:Label name="DeploymentsConnectionStatusLabel" class="text--muted" style="flex-grow: 0.6; flex-direction: column; -unity-text-align: middle-left; justify-content: flex-start; align-items: center; width: 75px;" />
                     <ui:Label name="DeploymentConnectionUrlLabel" text="&#10;" class="text--muted" style="flex-grow: 0.5; margin-left: 0; padding-left: 0; -unity-text-align: middle-left; align-items: center; width: 200px;" />
                     <ui:VisualElement name="DeploymentsConnectionServerStopHorizBtnHorizGroup" style="flex-grow: 1; flex-direction: row; align-items: center; justify-content: center;">
-                        <ui:Button name="DeploymentsConnectionServerStopBtn" text="Stop Server" class="button-edgegap text-edgegap" style="min-width: auto; width: 125px; max-width: none; visibility: visible; display: flex;" />
+                        <ui:Button name="DeploymentsConnectionServerStopBtn" text="Stop Server" class="button-edgegap text-edgegap" style="min-width: auto; width: 125px; max-width: none; visibility: visible; display: none;" />
                     </ui:VisualElement>
                 </ui:GroupBox>
             </ui:Foldout>

@@ -37,7 +37,8 @@ namespace Edgegap.Editor
         private GetRegistryCredentialsResult _credentials;
         private static readonly Regex _appNameAllowedCharsRegex = new(@"^[a-zA-Z0-9_\-+\.]*$");
         private GetCreateAppResult _loadedApp;
-        private CreateDeploymentResult _lastDeploymentCreated;
+        /// <summary>TODO: Make this a list</summary>
+        private GetDeploymentStatusResult _lastKnownDeployment;
         private string _deploymentRequestId;
         private string _userExternalIp;
         private bool _isAwaitingDeploymentReadyStatus;
@@ -395,6 +396,7 @@ namespace Edgegap.Editor
         private void initToggleDynamicUi()
         {
             hideResultLabels();
+            _deploymentsRefreshBtn.SetEnabled(false);
             loadPersistentDataFromPlayerPrefs();
             _debugBtn.visible = EdgegapWindowMetadata.SHOW_DEBUG_BTN;
         }
@@ -1038,11 +1040,36 @@ namespace Edgegap.Editor
             }
         }
 
+        /// <summary>
+        /// Currently only refreshes an existing deployment.
+        /// TODO: Consider dynamically adding the entire list via GET all deployments.
+        /// </summary>
         private async Task refreshDeploymentsAsync()
         {
-            throw new NotImplementedException("TODO: refreshDeploymentsAsync");
             if (IsLogLevelDebug) Debug.Log("refreshDeploymentsAsync");
             hideResultLabels();
+            clearDeploymentConnections();
+            _deploymentsConnectionStatusLabel.text = EdgegapWindowMetadata.WrapRichTextInColor(
+                "<i>Refreshing...</i>", EdgegapWindowMetadata.StatusColors.Processing);
+            
+            EdgegapDeploymentsApi deployApi = getDeployApi();
+            EdgegapHttpResult<GetDeploymentStatusResult> getDeploymentStatusResponse = 
+                await deployApi.GetDeploymentStatusAsync(_deploymentRequestId);
+
+            bool isActiveStatus = getDeploymentStatusResponse?.StatusCode != null &&
+                getDeploymentStatusResponse.Data.CurrentStatus == EdgegapWindowMetadata.READY_STATUS; 
+            
+            if (isActiveStatus)
+                onCreateDeploymentOrRefreshSuccess(getDeploymentStatusResponse.Data);
+            else
+                onCreateDeploymentStartServerFail();
+        }
+
+        private void clearDeploymentConnections()
+        {
+            _deploymentsConnectionUrlLabel.text = "";
+            _deploymentsConnectionStatusLabel.text = "";
+            _deploymentsConnectionStopBtn.style.display = DisplayStyle.None;
         }
         
         /// <summary>
@@ -1054,6 +1081,7 @@ namespace Edgegap.Editor
             if (IsLogLevelDebug) Debug.Log("createDeploymentStartServerAsync");
             hideResultLabels();
             _deploymentsCreateBtn.SetEnabled(false);
+            _deploymentsRefreshBtn.SetEnabled(false);
             _deploymentsConnectionUrlLabel.text = "";
             _deploymentsConnectionStatusLabel.text = EdgegapWindowMetadata.WrapRichTextInColor(
                 EdgegapWindowMetadata.DEPLOY_REQUEST_RICH_STR, 
@@ -1076,7 +1104,10 @@ namespace Edgegap.Editor
                     await deployApi.CreateDeploymentAsync(createDeploymentReq);
 
                 if (!createDeploymentResponse.IsResultCode200)
-                    onCreateDeploymentStartServerError(createDeploymentResponse);
+                {
+                    onCreateDeploymentStartServerFail(createDeploymentResponse);
+                    return;
+                }
                 else
                 {
                     // Update status
@@ -1086,16 +1117,16 @@ namespace Edgegap.Editor
 
                 // Check the status of the deployment for READY every 2s =>
                 const int pollIntervalSecs = EdgegapWindowMetadata.DEPLOYMENT_READY_STATUS_POLL_SECONDS;
-                _ = await deployApi.AwaitReadyStatusAsync(
+                EdgegapHttpResult<GetDeploymentStatusResult> getDeploymentStatusResponse = await deployApi.AwaitReadyStatusAsync(
                     createDeploymentResponse.Data.RequestId,
                     TimeSpan.FromSeconds(pollIntervalSecs));
 
                 // Process create deployment response
                 bool isSuccess = createDeploymentResponse.IsResultCode200;
                 if (isSuccess)
-                    onCreateDeploymentStartServerSuccess(createDeploymentResponse.Data);
+                    onCreateDeploymentOrRefreshSuccess(getDeploymentStatusResponse.Data);
                 else
-                    onCreateDeploymentStartServerError(createDeploymentResponse);
+                    onCreateDeploymentStartServerFail(createDeploymentResponse);
                 
                 _deploymentsStatusLabel.style.display = DisplayStyle.Flex;
             }
@@ -1105,22 +1136,26 @@ namespace Edgegap.Editor
             }
         }
 
-        private void onCreateDeploymentStartServerSuccess(CreateDeploymentResult result)
+        /// <summary>
+        /// CreateDeployment || RefreshDeployment success handler.
+        /// </summary>
+        /// <param name="getDeploymentStatusResult">Only pass from CreateDeployment</param>
+        private void onCreateDeploymentOrRefreshSuccess(GetDeploymentStatusResult getDeploymentStatusResult)
         {
             // Success
             hideResultLabels();
             _deploymentsStatusLabel.text = EdgegapWindowMetadata.WrapRichTextInColor(
                 "Success", EdgegapWindowMetadata.StatusColors.Success);
-            _deploymentsStatusLabel.visible = true;
+            _deploymentsStatusLabel.style.display = DisplayStyle.Flex;
             
             // Cache the deployment result -> persist the requestId
-            _lastDeploymentCreated = result;
-            _deploymentRequestId = result.RequestId;
+            _lastKnownDeployment = getDeploymentStatusResult;
+            _deploymentRequestId = getDeploymentStatusResult.RequestId;
             PlayerPrefs.SetString(EdgegapWindowMetadata.DEPLOYMENT_REQUEST_ID_KEY_STR_PREF_ID, _deploymentRequestId);
 
             // TODO: This will be dynamically inserted via MVC-style template
             // Set the static connection row label data
-            _deploymentsConnectionUrlLabel.text = result.RequestDns;
+            _deploymentsConnectionUrlLabel.text = getDeploymentStatusResult.Fqdn;
             _deploymentsConnectionStatusLabel.text = EdgegapWindowMetadata.WrapRichTextInColor(
                 $"Deployed ({_deploymentRequestId})",
                 EdgegapWindowMetadata.StatusColors.Success);
@@ -1129,6 +1164,9 @@ namespace Edgegap.Editor
             _deploymentsConnectionStopBtn.style.display = DisplayStyle.Flex;
             _deploymentsConnectionStopBtn.clickable.clickedWithEventInfo += onDynamicStopServerBtnAsync; // Unsubscribes on click
             _deploymentsConnectionStopBtn.visible = true;
+            
+            // Show refresh btn (currently targeting only this one)
+            _deploymentsRefreshBtn.SetEnabled(true);
         }
 
         /// <summary>
@@ -1148,6 +1186,7 @@ namespace Edgegap.Editor
             if (IsLogLevelDebug) Debug.Log("onDynamicStopServerAsync");
             hideResultLabels();
             _deploymentsConnectionStopBtn.SetEnabled(false);
+            _deploymentsRefreshBtn.SetEnabled(false);
             _deploymentsConnectionStatusLabel.text = EdgegapWindowMetadata.WrapRichTextInColor(
                 "<i>Requesting Stop...</i>",
                 EdgegapWindowMetadata.StatusColors.Processing);
@@ -1189,9 +1228,7 @@ namespace Edgegap.Editor
             else
             {
                 // Success: Hide the static row // TODO: Delete the template row, when dynamic
-                _deploymentsConnectionUrlLabel.text = "";
-                _deploymentsConnectionStatusLabel.text = "";
-                _deploymentsConnectionStopBtn.visible = false;
+                clearDeploymentConnections();
             }
         }
 
@@ -1201,7 +1238,7 @@ namespace Edgegap.Editor
                 friendlyErrMsg, EdgegapWindowMetadata.StatusColors.Error);
         }
 
-        private void onCreateDeploymentStartServerError(EdgegapHttpResult<CreateDeploymentResult> result)
+        private void onCreateDeploymentStartServerFail(EdgegapHttpResult<CreateDeploymentResult> result = null)
         {
             _deploymentsConnectionStopBtn.visible = false;
             _deploymentsConnectionUrlLabel.text = "";
@@ -1210,11 +1247,12 @@ namespace Edgegap.Editor
                 EdgegapWindowMetadata.StatusColors.Error);
             
             _deploymentsStatusLabel.text = EdgegapWindowMetadata.WrapRichTextInColor(
-                result.Error.ErrorMessage,
+                result?.Error.ErrorMessage ?? "Unknown Error",
                 EdgegapWindowMetadata.StatusColors.Error);
             _deploymentsStatusLabel.style.display = DisplayStyle.Flex;
 
-            if (result.IsResultCode403)
+            bool reachedNumDeploymentsHardcap = result is { IsResultCode403: true }; 
+            if (reachedNumDeploymentsHardcap)
                 shakeNeedMoreGameServersBtn();
         }
 

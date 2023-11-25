@@ -60,19 +60,21 @@ namespace Edgegap.Editor.Api.Models.Results
         {
             this.ReasonPhrase = httpResponse.ReasonPhrase;
             this.StatusCode = httpResponse.StatusCode;
-            
+
             try
             {
-                // TODO: This can be read async, but can't do this in a Constructor. Instead, make a factory builder Task =>
+                // TODO: This can be read async with `await`, but can't do this in a Constructor.
+                //       Instead, make a factory builder Task =>
                 this.Json = httpResponse.Content.ReadAsStringAsync().Result;
-                
+
                 this.Error = JsonConvert.DeserializeObject<EdgegapErrorResult>(Json);
                 if (Error != null && string.IsNullOrEmpty(Error.ErrorMessage))
                     Error = null;
             }
             catch (Exception e)
             {
-                Debug.LogError($"Error (reading httpResponse.Content): {e} - Client expected json, but server returned !json");
+                Debug.LogError("Error (reading httpResponse.Content): Client expected json, " +
+                    $"but server returned !json: {e} - ");
             }
         }
     }
