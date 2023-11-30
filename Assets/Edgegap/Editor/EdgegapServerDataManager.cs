@@ -176,7 +176,7 @@ namespace Edgegap
             VisualElement container = new VisualElement();
             container.AddToClassList("container");
 
-            container.Add(EdgegapServerDataManagerUtils.GetHeader("Server Ports"));
+            container.Add(EdgegapServerDataManagerUtils.GetHeader("Server PortsDict"));
             container.Add(EdgegapServerDataManagerUtils.GetHeaderRow());
 
             VisualElement portList = new VisualElement();

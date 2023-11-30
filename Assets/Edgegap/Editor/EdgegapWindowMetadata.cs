@@ -27,13 +27,13 @@ namespace Edgegap.Editor
         /// - Error level includes "potentially-intentional" (!fatal) errors logged with Debug.Log
         /// - TODO: Move opt to UI?
         /// </summary>
-        public const LogLevel LOG_LEVEL = LogLevel.Debug;
+        public const LogLevel LOG_LEVEL = LogLevel.Error;
         
         /// <summary>
         /// Set to show a debug button at the top-right for arbitrary testing.
         /// Default enables groups. Default `false`.
         /// </summary>
-        public const bool SHOW_DEBUG_BTN = true;
+        public const bool SHOW_DEBUG_BTN = false;
         
         /// <summary>
         /// When running a Docker-based "Build & Push" flow, skip building the Unity server binary
@@ -61,8 +61,8 @@ namespace Edgegap.Editor
         public const string READY_STATUS = "Status.READY";
 
         public const string EDGEGAP_GET_A_TOKEN_URL = "https://app.edgegap.com/?oneClick=true";
-        public const string EDGEGAP_CONTACT_EN_URL = "https://edgegap.com/en/resources/contact";
-        public const string EDGEGAP_HOW_TO_LOGIN_VIA_CLI_DOC_URL = "https://docs.edgegap.com/docs/container/edgegap-container-registry/#getting-your-credentials";
+        public const string EDGEGAP_ADD_MORE_GAME_SERVERS_URL = "https://edgegap.com/en/resources/contact";
+        public const string EDGEGAP_DOC_BTN_HOW_TO_LOGIN_VIA_CLI_URL = "https://docs.edgegap.com/docs/container/edgegap-container-registry/#getting-your-credentials";
         public const string DEFAULT_VERSION_TAG = "latest";
         public const string LOADING_RICH_STR = "<i>Loading...</i>";
         public const string PROCESSING_RICH_STR = "<i>Processing...</i>";
@@ -117,9 +117,11 @@ namespace Edgegap.Editor
         
         #region Player Pref Key Ids for persistence
         /// <summary>Cached as base64</summary>
-        public const string API_TOKEN_KEY_STR_PREF_ID = "ApiToken";
-        public const string DEPLOYMENT_REQUEST_ID_KEY_STR_PREF_ID = "DeploymentRequestId";
-        #endregion // Player Pref Key Ids for persistence
+        public const string API_TOKEN_KEY_STR = "ApiToken";
+        public const string DEPLOYMENT_REQUEST_ID_KEY_STR = "DeploymentRequestId";
+        public const string DEPLOYMENT_CONNECTION_URL_KEY_STR = "DeploymentConnectionUrlLabel";
+        public const string DEPLOYMENT_CONNECTION_STATUS_KEY_STR = "DeploymentsConnectionStatusLabel";
+        #endregion // Editor Pref Key Ids for persistence
         
         #region UI Element Ids
         public const string DEBUG_BTN_ID = "DebugBtn";
@@ -153,7 +155,8 @@ namespace Edgegap.Editor
         public const string DEPLOYMENTS_CREATE_BTN_ID = "DeploymentsCreateBtn";
         public const string DEPLOYMENTS_STATUS_LABEL_ID = "DeploymentsStatusLabel";
         public const string DEPLOYMENTS_CONTAINER_ID = "DeploymentsConnectionGroupBox";
-        public const string DEPLOYMENTS_CONNECTION_URL_LABEL_ID = "DeploymentConnectionUrlLabel"; // Dynamic
+        public const string DEPLOYMENTS_CONNECTION_COPY_URL_BTN_ID = "DeploymentConnectionCopyUrlBtn";
+        public const string DEPLOYMENTS_CONNECTION_URL_READONLY_TXT_ID = "DeploymentConnectionUrlReadOnlyTxt"; // Dynamic
         public const string DEPLOYMENTS_CONNECTION_STATUS_LABEL_ID = "DeploymentsConnectionStatusLabel"; // Dynamic
         public const string DEPLOYMENTS_CONNECTION_SERVER_ACTION_STOP_BTN_ID = "DeploymentsConnectionServerStopBtn";
             

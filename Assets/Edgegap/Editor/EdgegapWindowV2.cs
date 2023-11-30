@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -7,8 +9,6 @@ using Edgegap.Editor.Api;
 using Edgegap.Editor.Api.Models;
 using Edgegap.Editor.Api.Models.Requests;
 using Edgegap.Editor.Api.Models.Results;
-using IO.Swagger.Model;
-using Newtonsoft.Json;
 using UnityEditor;
 using UnityEditor.Build.Reporting;
 using UnityEditor.UIElements;
@@ -48,7 +48,7 @@ namespace Edgegap.Editor
         #region Vars -> Interactable Elements
         private Button _debugBtn;
         
-        /// <summary>(!) This is saved manually to PlayerPrefs via Base64 instead of via UiBuilder</summary>
+        /// <summary>(!) This is saved manually to EditorPrefs via Base64 instead of via UiBuilder</summary>
         private TextField _apiTokenInput;
         
         private Button _apiTokenVerifyBtn;
@@ -83,7 +83,8 @@ namespace Edgegap.Editor
         /// <summary>display:none (since it's on its own line), rather than !visible.</summary>
         private Label _deploymentsStatusLabel;
         private VisualElement _deploymentsServerDataContainer;
-        private Label _deploymentsConnectionUrlLabel;
+        private Button _deploymentConnectionCopyUrlBtn;
+        private TextField _deploymentsConnectionUrlReadonlyInput;
         private Label _deploymentsConnectionStatusLabel;
         private Button _deploymentsConnectionStopBtn;
 
@@ -195,7 +196,8 @@ namespace Edgegap.Editor
             _deploymentsCreateBtn = rootVisualElement.Q<Button>(EdgegapWindowMetadata.DEPLOYMENTS_CREATE_BTN_ID);
             _deploymentsStatusLabel = rootVisualElement.Q<Label>(EdgegapWindowMetadata.DEPLOYMENTS_STATUS_LABEL_ID);
             _deploymentsServerDataContainer = rootVisualElement.Q<VisualElement>(EdgegapWindowMetadata.DEPLOYMENTS_CONTAINER_ID); // Dynamic
-            _deploymentsConnectionUrlLabel = rootVisualElement.Q<Label>(EdgegapWindowMetadata.DEPLOYMENTS_CONNECTION_URL_LABEL_ID);
+            _deploymentConnectionCopyUrlBtn = rootVisualElement.Q<Button>(EdgegapWindowMetadata.DEPLOYMENTS_CONNECTION_COPY_URL_BTN_ID);
+            _deploymentsConnectionUrlReadonlyInput = rootVisualElement.Q<TextField>(EdgegapWindowMetadata.DEPLOYMENTS_CONNECTION_URL_READONLY_TXT_ID);
             _deploymentsConnectionStatusLabel = rootVisualElement.Q<Label>(EdgegapWindowMetadata.DEPLOYMENTS_CONNECTION_STATUS_LABEL_ID);
             _deploymentsConnectionStopBtn = rootVisualElement.Q<Button>(EdgegapWindowMetadata.DEPLOYMENTS_CONNECTION_SERVER_ACTION_STOP_BTN_ID);
             
@@ -292,8 +294,11 @@ namespace Edgegap.Editor
                 Assert.IsTrue(_deploymentsServerDataContainer is { name: EdgegapWindowMetadata.DEPLOYMENTS_CONTAINER_ID },
                     $"Expected {nameof(_deploymentsServerDataContainer)} via #{EdgegapWindowMetadata.DEPLOYMENTS_CONTAINER_ID}");
                 
-                Assert.IsTrue(_deploymentsConnectionUrlLabel is { name: EdgegapWindowMetadata.DEPLOYMENTS_CONNECTION_URL_LABEL_ID },
-                    $"Expected {nameof(_deploymentsConnectionUrlLabel)} via #{EdgegapWindowMetadata.DEPLOYMENTS_CONNECTION_URL_LABEL_ID}");
+                Assert.IsTrue(_deploymentConnectionCopyUrlBtn is { name: EdgegapWindowMetadata.DEPLOYMENTS_CONNECTION_COPY_URL_BTN_ID },
+                    $"Expected {nameof(_deploymentConnectionCopyUrlBtn)} via #{EdgegapWindowMetadata.DEPLOYMENTS_CONNECTION_COPY_URL_BTN_ID}");   
+                
+                Assert.IsTrue(_deploymentsConnectionUrlReadonlyInput is { name: EdgegapWindowMetadata.DEPLOYMENTS_CONNECTION_URL_READONLY_TXT_ID },
+                    $"Expected {nameof(_deploymentsConnectionUrlReadonlyInput)} via #{EdgegapWindowMetadata.DEPLOYMENTS_CONNECTION_URL_READONLY_TXT_ID}");
                 
                 Assert.IsTrue(_deploymentsConnectionStatusLabel is { name: EdgegapWindowMetadata.DEPLOYMENTS_CONNECTION_STATUS_LABEL_ID },
                     $"Expected {nameof(_deploymentsConnectionStatusLabel)} via #{EdgegapWindowMetadata.DEPLOYMENTS_CONNECTION_STATUS_LABEL_ID}");
@@ -362,6 +367,7 @@ namespace Edgegap.Editor
             _appLoadExistingBtn.clickable.clicked += onAppLoadExistingBtnClickAsync;
             
             _containerBuildAndPushServerBtn.clickable.clicked += onContainerBuildAndPushServerBtnClickAsync;
+            _deploymentConnectionCopyUrlBtn.clickable.clicked += onDeploymentConnectionCopyUrlBtnClick;
             
             _deploymentsRefreshBtn.clickable.clicked += onDeploymentsRefreshBtnClick;
             _deploymentsCreateBtn.clickable.clicked += onDeploymentCreateBtnClick;
@@ -385,7 +391,8 @@ namespace Edgegap.Editor
             _appLoadExistingBtn.clickable.clicked -= onAppLoadExistingBtnClickAsync;
 
             _containerBuildAndPushServerBtn.clickable.clicked -= onContainerBuildAndPushServerBtnClickAsync;
-            
+            _deploymentConnectionCopyUrlBtn.clickable.clicked -= onDeploymentConnectionCopyUrlBtnClick;
+
             _deploymentsRefreshBtn.clickable.clicked -= onDeploymentsRefreshBtnClick;
             _deploymentsCreateBtn.clickable.clicked -= onDeploymentCreateBtnClick;
             
@@ -397,30 +404,31 @@ namespace Edgegap.Editor
         {
             hideResultLabels();
             _deploymentsRefreshBtn.SetEnabled(false);
-            loadPersistentDataFromPlayerPrefs();
+            loadPersistentDataFromEditorPrefs();
+            setDeploymentBtnsFromCache();
             _debugBtn.visible = EdgegapWindowMetadata.SHOW_DEBUG_BTN;
         }
 
         /// <summary>
-        /// Load from PlayerPrefs, persisting from a previous session:
-        /// - ApiToken; !persisted via ViewDataKey so we don't save plaintext
-        /// - DeploymentRequestId
+        /// Based on existing _deploymentsConnection[Url|Status]Label txt
         /// </summary>
-        private void loadPersistentDataFromPlayerPrefs()
+        private void setDeploymentBtnsFromCache()
         {
-            // ApiToken
-            if (string.IsNullOrEmpty(_apiTokenInput.value))
-            {
-                string apiTokenBase64Str = PlayerPrefs.GetString(EdgegapWindowMetadata.API_TOKEN_KEY_STR_PREF_ID, null);
-                if (apiTokenBase64Str != null)
-                    _apiTokenInput.SetValueWithoutNotify(Base64Decode(apiTokenBase64Str));
-            }
+            bool showDeploymentConnectionStopBtn = !string.IsNullOrEmpty(_deploymentsConnectionUrlReadonlyInput.text);
+            if (!showDeploymentConnectionStopBtn)
+                return;
             
-            // DeploymentRequestId
-            if (string.IsNullOrEmpty(_deploymentRequestId))
-                _deploymentRequestId = PlayerPrefs.GetString(EdgegapWindowMetadata.DEPLOYMENT_REQUEST_ID_KEY_STR_PREF_ID);
+            // We found some leftover connection cache >>
+            _deploymentsConnectionStopBtn.visible = true;
+            _deploymentsRefreshBtn.SetEnabled(true);
+
+            // Enable stop btn?
+            bool isDeployed = _deploymentsConnectionStatusLabel.text.ToLowerInvariant().Contains("deployed");
+            _deploymentsConnectionStopBtn.SetEnabled(isDeployed);
+            if (isDeployed)
+                _deploymentsConnectionStopBtn.clickable.clickedWithEventInfo += onDynamicStopServerBtnAsync; // Unsub'd from within
         }
-        
+
         /// <summary>For example, result labels (success/err) should be hidden on init</summary>
         private void hideResultLabels()
         {
@@ -484,6 +492,25 @@ namespace Edgegap.Editor
             }
         }
 
+        /// <summary>Copy url to clipboard</summary>
+        private void onDeploymentConnectionCopyUrlBtnClick()
+        {
+            if (string.IsNullOrEmpty(_deploymentsConnectionUrlReadonlyInput.value))
+                return; // Nothing to copy
+            
+            EditorGUIUtility.systemCopyBuffer = _deploymentsConnectionUrlReadonlyInput.value;
+            _deploymentsStatusLabel.text = EdgegapWindowMetadata.WrapRichTextInColor("Copied URL!", 
+                EdgegapWindowMetadata.StatusColors.Success);
+            _deploymentsStatusLabel.style.display = DisplayStyle.Flex;
+            _ = clearDeploymentStatusAfterDelay(seconds: 1);
+        }
+
+        private async Task clearDeploymentStatusAfterDelay(int seconds)
+        {
+            await Task.Delay(TimeSpan.FromSeconds(seconds));
+            _deploymentsStatusLabel.style.display = DisplayStyle.None;
+        }
+
         /// <summary>Process UI + validation before/after API logic</summary>
         private async void onContainerBuildAndPushServerBtnClickAsync()
         {
@@ -536,7 +563,9 @@ namespace Edgegap.Editor
             Assert.IsTrue(!string.IsNullOrEmpty(_appNameInput.value), 
                 $"Expected {nameof(_appNameInput)} val");
 
-        /// <summary>TODO: Save persistent data?</summary>
+        /// <summary>
+        /// Save persistent read-only data: If the human didn't type it, it won't save automatically.
+        /// </summary>
         private void SyncObjectWithForm()
         {
             _appIconSpriteObj = _appIconSpriteObjInput.value as Sprite;
@@ -559,7 +588,7 @@ namespace Edgegap.Editor
 
         /// <summary>
         /// Dynamically set form based on API call results.
-        /// => If APIToken is cached via PlayerPrefs, verify => gets registry creds.
+        /// => If APIToken is cached via EditorPrefs, verify => gets registry creds.
         /// => If appName is cached via ViewDataKey, loads the app.
         /// </summary>
         private async Task syncFormWithObjectDynamicAsync()
@@ -824,7 +853,7 @@ namespace Edgegap.Editor
             {
                 // Success
                 _credentials = getRegistryCredentialsResult.Data;
-                PlayerPrefs.SetString(EdgegapWindowMetadata.API_TOKEN_KEY_STR_PREF_ID, Base64Encode(_apiTokenInput.value));
+                persistUnmaskedApiToken(_apiTokenInput.value);
                 prefillContainerRegistryForm(_credentials);
             }
             else
@@ -893,9 +922,9 @@ namespace Edgegap.Editor
             
             _containerRegistryFoldout.SetEnabled(isApiTokenVerifiedAndContainerReady);
             _containerRegistryFoldout.value = isApiTokenVerifiedAndContainerReady;
-            
+
             _deploymentsFoldout.SetEnabled(isApiTokenVerifiedAndContainerReady);
-            _deploymentsFoldout.value = isApiTokenVerifiedAndContainerReady && _containerUseCustomRegistryToggle.value;
+            _deploymentsFoldout.value = isApiTokenVerifiedAndContainerReady;
 
             // + Requires _containerUseCustomRegistryToggleBool
             _containerCustomRegistryWrapper.SetEnabled(isApiTokenVerifiedAndContainerReady && 
@@ -1024,7 +1053,7 @@ namespace Edgegap.Editor
 
         /// <summary>Open contact form in desired locale</summary>
         private void openNeedMoreGameServersWebsite() =>
-            Application.OpenURL(EdgegapWindowMetadata.EDGEGAP_CONTACT_EN_URL);
+            Application.OpenURL(EdgegapWindowMetadata.EDGEGAP_ADD_MORE_GAME_SERVERS_URL);
         
         private void openDocumentationWebsite()
         {
@@ -1041,14 +1070,23 @@ namespace Edgegap.Editor
         }
 
         /// <summary>
-        /// Currently only refreshes an existing deployment.
+        /// Currently only refreshes an existing deployment. AKA "OnRefresh".
         /// TODO: Consider dynamically adding the entire list via GET all deployments.
         /// </summary>
         private async Task refreshDeploymentsAsync()
         {
             if (IsLogLevelDebug) Debug.Log("refreshDeploymentsAsync");
+            
+            // Sanity check requestId - if refreshBtn is enabled, we *should* have it
+            if (string.IsNullOrEmpty(_deploymentRequestId))
+            {
+                // We must have stale data - reset
+                clearDeploymentConnections();
+                return;
+            }
+            
             hideResultLabels();
-            clearDeploymentConnections();
+            // clearDeploymentConnections(); // We want to leave the old URL while we only have one
             _deploymentsConnectionStatusLabel.text = EdgegapWindowMetadata.WrapRichTextInColor(
                 "<i>Refreshing...</i>", EdgegapWindowMetadata.StatusColors.Processing);
             
@@ -1062,14 +1100,30 @@ namespace Edgegap.Editor
             if (isActiveStatus)
                 onCreateDeploymentOrRefreshSuccess(getDeploymentStatusResponse.Data);
             else
+            {
                 onCreateDeploymentStartServerFail();
+                if (!getDeploymentStatusResponse.HasErr)
+                    onRefreshDeploymentStoppedStatus(); // Only a "soft" fail - not a true err
+            }
         }
 
+        /// <summary>The deployment simply stopped (a "soft" fail - not an actual err)</summary>
+        private void onRefreshDeploymentStoppedStatus()
+        {
+            // Override to Create fail -- instead, we've simplfy stopped (a "soft" fail)
+            _deploymentsConnectionStatusLabel.text = getConnectionStoppedRichStr();
+            _deploymentsStatusLabel.style.display = DisplayStyle.None;
+            _deploymentsConnectionStopBtn.SetEnabled(false);
+            _deploymentsConnectionStopBtn.visible = true;
+        }
+
+        /// <summary>Don't use this if you want to keep the last-known connection info.</summary>
         private void clearDeploymentConnections()
         {
-            _deploymentsConnectionUrlLabel.text = "";
+            _deploymentsConnectionUrlReadonlyInput.value = "";
             _deploymentsConnectionStatusLabel.text = "";
-            _deploymentsConnectionStopBtn.style.display = DisplayStyle.None;
+            _deploymentsConnectionStopBtn.visible = false;
+            _deploymentsRefreshBtn.SetEnabled(false);
         }
         
         /// <summary>
@@ -1082,7 +1136,7 @@ namespace Edgegap.Editor
             hideResultLabels();
             _deploymentsCreateBtn.SetEnabled(false);
             _deploymentsRefreshBtn.SetEnabled(false);
-            _deploymentsConnectionUrlLabel.text = "";
+            // _deploymentsConnectionUrlReadonlyInput.value = ""; // We currently want to keep the last known connection, even on err
             _deploymentsConnectionStatusLabel.text = EdgegapWindowMetadata.WrapRichTextInColor(
                 EdgegapWindowMetadata.DEPLOY_REQUEST_RICH_STR, 
                 EdgegapWindowMetadata.StatusColors.Processing);
@@ -1135,7 +1189,7 @@ namespace Edgegap.Editor
                 _deploymentsCreateBtn.SetEnabled(true);
             }
         }
-
+        
         /// <summary>
         /// CreateDeployment || RefreshDeployment success handler.
         /// </summary>
@@ -1151,22 +1205,54 @@ namespace Edgegap.Editor
             // Cache the deployment result -> persist the requestId
             _lastKnownDeployment = getDeploymentStatusResult;
             _deploymentRequestId = getDeploymentStatusResult.RequestId;
-            PlayerPrefs.SetString(EdgegapWindowMetadata.DEPLOYMENT_REQUEST_ID_KEY_STR_PREF_ID, _deploymentRequestId);
+            EditorPrefs.SetString(EdgegapWindowMetadata.DEPLOYMENT_REQUEST_ID_KEY_STR, _deploymentRequestId);
 
-            // TODO: This will be dynamically inserted via MVC-style template
-            // Set the static connection row label data
-            _deploymentsConnectionUrlLabel.text = getDeploymentStatusResult.Fqdn;
-            _deploymentsConnectionStatusLabel.text = EdgegapWindowMetadata.WrapRichTextInColor(
-                $"Deployed ({_deploymentRequestId})",
-                EdgegapWindowMetadata.StatusColors.Success);
+            // ------------
+            // Set the static connection row label data >>
+            // TODO: This will be dynamically inserted via MVC-style template when we support multiple deployments >>
             
+            // Get external port
+            // BUG(WORKAROUND): Expected `ports` to be List<PortsData>, but received Dictionary<string, PortsData>
+            KeyValuePair<string, PortsData> portsDataKvp = getDeploymentStatusResult.PortsDict.FirstOrDefault();
+            Assert.IsNotNull(portsDataKvp.Value, $"Expected ({nameof(portsDataKvp)} from `getDeploymentStatusResult.PortsDict`)");
+            PortsData portData = portsDataKvp.Value;
+            string externalPortStr = portData.Port.ToString();
+            string domainWithExternalPort = $"{getDeploymentStatusResult.Fqdn}:{externalPortStr}";
+            
+            _deploymentsConnectionUrlReadonlyInput.value = domainWithExternalPort;
+            string newConnectionStatus = EdgegapWindowMetadata.WrapRichTextInColor(
+                "Deployed", EdgegapWindowMetadata.StatusColors.Success);
+            
+            // Change + Persist read-only fields (ViewDataKeys only save automatically from human input)
+            setPersistDeploymentsConnectionUrlLabelTxt(domainWithExternalPort);
+            setPersistDeploymentsConnectionStatusLabelTxt(newConnectionStatus);
+            
+            // ------------
             // Configure + show stop button
-            _deploymentsConnectionStopBtn.style.display = DisplayStyle.Flex;
             _deploymentsConnectionStopBtn.clickable.clickedWithEventInfo += onDynamicStopServerBtnAsync; // Unsubscribes on click
             _deploymentsConnectionStopBtn.visible = true;
+            _deploymentsConnectionStopBtn.SetEnabled(true);
             
             // Show refresh btn (currently targeting only this one)
             _deploymentsRefreshBtn.SetEnabled(true);
+        }
+
+        private void onCreateDeploymentStartServerFail(EdgegapHttpResult<CreateDeploymentResult> result = null)
+        {
+            _deploymentsConnectionStopBtn.visible = false;
+            _deploymentsConnectionStatusLabel.text = EdgegapWindowMetadata.WrapRichTextInColor(
+                "Failed to Start", EdgegapWindowMetadata.StatusColors.Error);
+            
+            _deploymentsStatusLabel.text = EdgegapWindowMetadata.WrapRichTextInColor(
+                result?.Error.ErrorMessage ?? "Unknown Error",
+                EdgegapWindowMetadata.StatusColors.Error);
+            _deploymentsStatusLabel.style.display = DisplayStyle.Flex;
+            
+            Debug.Log("(!) Check your deployments here: https://app.edgegap.com/deployment-management/deployments/list");
+
+            bool reachedNumDeploymentsHardcap = result is { IsResultCode403: true }; 
+            if (reachedNumDeploymentsHardcap)
+                shakeNeedMoreGameServersBtn();
         }
 
         /// <summary>
@@ -1188,8 +1274,7 @@ namespace Edgegap.Editor
             _deploymentsConnectionStopBtn.SetEnabled(false);
             _deploymentsRefreshBtn.SetEnabled(false);
             _deploymentsConnectionStatusLabel.text = EdgegapWindowMetadata.WrapRichTextInColor(
-                "<i>Requesting Stop...</i>",
-                EdgegapWindowMetadata.StatusColors.Processing);
+                "<i>Requesting Stop...</i>", EdgegapWindowMetadata.StatusColors.Processing);
             
             EdgegapDeploymentsApi deployApi = getDeployApi();
             EdgegapHttpResult<StopActiveDeploymentResult> stopResponse = null;
@@ -1208,8 +1293,7 @@ namespace Edgegap.Editor
                 // 200, but only PENDING deleted (if we create a new one before it's deleted,
                 //   user may get hit with max # of deployments reached err)
                 _deploymentsConnectionStatusLabel.text = EdgegapWindowMetadata.WrapRichTextInColor(
-                    "<i>Stopping...</i>",
-                    EdgegapWindowMetadata.StatusColors.Warn);
+                    "<i>Stopping...</i>", EdgegapWindowMetadata.StatusColors.Warn);
 
                 TimeSpan pollIntervalSecs = TimeSpan.FromSeconds(EdgegapWindowMetadata.DEPLOYMENT_STOP_STATUS_POLL_SECONDS);
                 stopResponse = await deployApi.AwaitTerminatedDeleteStatusAsync(_deploymentRequestId, pollIntervalSecs);
@@ -1225,35 +1309,22 @@ namespace Edgegap.Editor
                 onDynamicStopServerAsyncFail(stopResponse.Error.ErrorMessage);
                 return;
             }
-            else
-            {
-                // Success: Hide the static row // TODO: Delete the template row, when dynamic
-                clearDeploymentConnections();
-            }
+
+            // Success: Hide the static row // TODO: Delete the template row, when dynamic
+            // clearDeploymentConnections(); // Use this if you don't want to show the last connection info
+            string stoppedStr = getConnectionStoppedRichStr();
+            _deploymentsStatusLabel.text = ""; // Overrides any previous errs, in case we attempted to created a new deployment while deleting
+            setPersistDeploymentsConnectionStatusLabelTxt(stoppedStr);
         }
+        
+        private string getConnectionStoppedRichStr() =>
+            EdgegapWindowMetadata.WrapRichTextInColor(
+                "Stopped", EdgegapWindowMetadata.StatusColors.Error);
 
         private void onDynamicStopServerAsyncFail(string friendlyErrMsg)
         {
-            _deploymentsConnectionStatusLabel.text = EdgegapWindowMetadata.WrapRichTextInColor(
-                friendlyErrMsg, EdgegapWindowMetadata.StatusColors.Error);
-        }
-
-        private void onCreateDeploymentStartServerFail(EdgegapHttpResult<CreateDeploymentResult> result = null)
-        {
-            _deploymentsConnectionStopBtn.visible = false;
-            _deploymentsConnectionUrlLabel.text = "";
-            _deploymentsConnectionStatusLabel.text = EdgegapWindowMetadata.WrapRichTextInColor(
-                "Failed to Start",
-                EdgegapWindowMetadata.StatusColors.Error);
-            
             _deploymentsStatusLabel.text = EdgegapWindowMetadata.WrapRichTextInColor(
-                result?.Error.ErrorMessage ?? "Unknown Error",
-                EdgegapWindowMetadata.StatusColors.Error);
-            _deploymentsStatusLabel.style.display = DisplayStyle.Flex;
-
-            bool reachedNumDeploymentsHardcap = result is { IsResultCode403: true }; 
-            if (reachedNumDeploymentsHardcap)
-                shakeNeedMoreGameServersBtn();
+                friendlyErrMsg, EdgegapWindowMetadata.StatusColors.Error);
         }
 
         /// <summary>Sets and returns `_userExternalIp`, prioritizing local cache</summary>
@@ -1371,7 +1442,7 @@ namespace Edgegap.Editor
                 {
                     onBuildPushError("Unable to login to docker registry. " +
                         "Make sure your registry url + username are correct. " +
-                        $"See doc:\n\n{EdgegapWindowMetadata.EDGEGAP_HOW_TO_LOGIN_VIA_CLI_DOC_URL}");
+                        $"See doc:\n\n{EdgegapWindowMetadata.EDGEGAP_DOC_BTN_HOW_TO_LOGIN_VIA_CLI_URL}");
                     return;
                 }
 
@@ -1386,7 +1457,7 @@ namespace Edgegap.Editor
                 {
                     onBuildPushError("Unable to push docker image to registry. " +
                         $"Make sure your {registry} registry url + username are correct. " +
-                        $"See doc:\n\n{EdgegapWindowMetadata.EDGEGAP_HOW_TO_LOGIN_VIA_CLI_DOC_URL}");
+                        $"See doc:\n\n{EdgegapWindowMetadata.EDGEGAP_DOC_BTN_HOW_TO_LOGIN_VIA_CLI_URL}");
                     return;
                 }
 
@@ -1463,5 +1534,92 @@ namespace Edgegap.Editor
                 "Error", EdgegapWindowMetadata.StatusColors.Error);
             EditorUtility.DisplayDialog("Error", msg, "Ok"); // Show this last! It's blocking!
         }
+        
+        
+        #region Persistence Helpers
+        /// <summary>
+        /// Load from EditorPrefs, persisting from a previous session, if the field is empty
+        /// - ApiToken; !persisted via ViewDataKey so we don't save plaintext
+        /// - DeploymentRequestId
+        /// - DeploymentConnectionUrl
+        /// - DeploymentConnectionStatus
+        /// </summary>
+        private void loadPersistentDataFromEditorPrefs()
+        {
+            // ApiToken
+            if (string.IsNullOrEmpty(_apiTokenInput.value))
+                setMaskedApiTokenFromEditorPrefs();
+            
+            // DeploymentRequestId
+            if (string.IsNullOrEmpty(_deploymentRequestId))
+                _deploymentRequestId = EditorPrefs.GetString(EdgegapWindowMetadata.DEPLOYMENT_REQUEST_ID_KEY_STR);
+            
+            // DeploymentConnectionUrl
+            if (string.IsNullOrEmpty(_deploymentsConnectionUrlReadonlyInput.text))
+            {
+                _deploymentsConnectionUrlReadonlyInput.value = getDeploymentsConnectionUrlLabelTxt();
+                bool hasVal = !string.IsNullOrEmpty(_deploymentsConnectionUrlReadonlyInput.value);
+                if (hasVal && string.IsNullOrEmpty(_deploymentRequestId))
+                {
+                    // Fallback -- if no requestId, we can actually get it from the url since we have this (desync)
+                    _deploymentRequestId = _deploymentsConnectionUrlReadonlyInput.value.Split('.')[0];
+                    EditorPrefs.SetString(EdgegapWindowMetadata.DEPLOYMENT_REQUEST_ID_KEY_STR, _deploymentRequestId);
+                }
+                // TODO (Optional): Show a status label to remind these are cached vals; refresh for live?
+            }
+            
+            // DeploymentConnectionStatus
+            if (string.IsNullOrEmpty(_deploymentsConnectionStatusLabel.text) || _deploymentsConnectionStatusLabel.text == "Unknown")
+                _deploymentsConnectionStatusLabel.text = getDeploymentsConnectionStatusLabelTxt();
+        }
+
+        /// <summary>Set Label -> Persist to EditorPrefs</summary>
+        /// <param name="newDomainWithPort"></param>
+        private void setPersistDeploymentsConnectionUrlLabelTxt(string newDomainWithPort)
+        {
+            _deploymentsConnectionUrlReadonlyInput.value = newDomainWithPort;
+            EditorPrefs.SetString(EdgegapWindowMetadata.DEPLOYMENT_CONNECTION_URL_KEY_STR, newDomainWithPort);
+        }
+        
+        /// <summary>Get persistent data fromEditorPrefs</summary>
+        private string getDeploymentsConnectionUrlLabelTxt() =>
+            EditorPrefs.GetString(EdgegapWindowMetadata.DEPLOYMENT_CONNECTION_URL_KEY_STR);
+
+        /// <summary>Set label -> persist to EditorPrefs</summary>
+        /// <param name="newStatus"></param>
+        private void setPersistDeploymentsConnectionStatusLabelTxt(string newStatus)
+        {
+            _deploymentsConnectionStatusLabel.text = newStatus;
+            EditorPrefs.SetString(EdgegapWindowMetadata.DEPLOYMENT_CONNECTION_STATUS_KEY_STR, newStatus);
+        }
+        
+        /// <summary>Get persistent data fromEditorPrefs</summary>
+        private string getDeploymentsConnectionStatusLabelTxt() =>
+            EditorPrefs.GetString(EdgegapWindowMetadata.DEPLOYMENT_CONNECTION_STATUS_KEY_STR);
+        
+        /// <summary>Set to base64 -> Save to EditorPrefs</summary>
+        /// <param name="value"></param>
+        private void persistUnmaskedApiToken(string value)
+        {
+            EditorPrefs.SetString(
+                EdgegapWindowMetadata.API_TOKEN_KEY_STR, 
+                Base64Encode(value));
+        }
+        
+        /// <summary>
+        /// Get apiToken from EditorPrefs -> Base64 Decode -> Set to apiTokenInput
+        /// </summary>
+        private void setMaskedApiTokenFromEditorPrefs()
+        {
+            string apiTokenBase64Str = EditorPrefs.GetString(
+                EdgegapWindowMetadata.API_TOKEN_KEY_STR, null);
+
+            if (apiTokenBase64Str == null)
+                return;
+            
+            string decodedApiToken = Base64Decode(apiTokenBase64Str);
+            _apiTokenInput.SetValueWithoutNotify(decodedApiToken);
+        }
+        #endregion // Persistence Helpers
     }
 }

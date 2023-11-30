@@ -100,8 +100,12 @@ namespace Edgegap.Editor.Api.Models.Requests
         [JsonProperty("arguments")]
         public string Arguments { get; set; }
        
-        [JsonProperty("session_config")]
-        public SessionConfigData SessionConfig { get; set; } = new();
+        // /// <summary>
+        // /// (!) Setting this will trigger a very specific type of game that will affect the AppVersion.
+        // /// TODO: Is leaving as null the same as commenting out?
+        // /// </summary>
+        // [JsonProperty("session_config")]
+        // public SessionConfigData SessionConfig { get; set; }
        
         [JsonProperty("probe")]
         public ProbeData Probe { get; set; } = new();

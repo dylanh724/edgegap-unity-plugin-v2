@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Newtonsoft.Json;
 
 namespace Edgegap.Editor.Api.Models.Results
@@ -71,10 +72,18 @@ namespace Edgegap.Editor.Api.Models.Results
         [JsonProperty("arguments")]
         public string Arguments { get; set; }
         
-        // /// <summary>
-        // /// BUG(BREAKING): See PortsData.cs for more info. This should be an array, not an object (therefore, we comment this out).
-        // /// </summary>
-        // [JsonProperty("ports")]
-        // public PortsData ports { get; set; }
+        /// <summary>
+        /// TODO: Server should swap `ports` to an array of PortsData (instead of an object of dynamic unknown objects).
+        /// <example>
+        /// {
+        ///     "7777", {}
+        /// },
+        /// {
+        ///     "Some Port Name", {}
+        /// }
+        /// </example>
+        /// </summary>
+        [JsonProperty("ports")]
+        public Dictionary<string, PortsData> PortsDict { get; set; }
     }
 }

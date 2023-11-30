@@ -97,6 +97,10 @@
     background-color: rgb(56, 96, 107);
 }
 
+.button-purple-hover:hover {
+    background-color: rgb(44, 30, 210);
+}
+
 .container-row-parent {
     background-color: rgb(49, 49, 49);
     border-top-color: rgb(0, 0, 0);
@@ -191,4 +195,13 @@ Toggle > #unity-checkmark {
 
 .customContainerChildTxt {
     padding-left: 32px;
+}
+
+#DeploymentConnectionUrlReadOnlyTxt > #unity-text-input {
+    display: flex;
+    visibility: visible;
+    background-color: rgba(0, 0, 0, 0.13);
+}
+
+.button-purple-hover {
 }
