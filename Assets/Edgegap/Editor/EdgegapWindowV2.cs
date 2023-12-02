@@ -1212,11 +1212,11 @@ namespace Edgegap.Editor
             // TODO: This will be dynamically inserted via MVC-style template when we support multiple deployments >>
             
             // Get external port
-            // BUG(WORKAROUND): Expected `ports` to be List<PortsData>, but received Dictionary<string, PortsData>
-            KeyValuePair<string, PortsData> portsDataKvp = getDeploymentStatusResult.PortsDict.FirstOrDefault();
+            // BUG(WORKAROUND): Expected `ports` to be List<AppPortsData>, but received Dictionary<string, AppPortsData>
+            KeyValuePair<string, DeploymentPortsData> portsDataKvp = getDeploymentStatusResult.PortsDict.FirstOrDefault();
             Assert.IsNotNull(portsDataKvp.Value, $"Expected ({nameof(portsDataKvp)} from `getDeploymentStatusResult.PortsDict`)");
-            PortsData portData = portsDataKvp.Value;
-            string externalPortStr = portData.Port.ToString();
+            DeploymentPortsData deploymentPortData = portsDataKvp.Value;
+            string externalPortStr = deploymentPortData.External.ToString();
             string domainWithExternalPort = $"{getDeploymentStatusResult.Fqdn}:{externalPortStr}";
             
             _deploymentsConnectionUrlReadonlyInput.value = domainWithExternalPort;
@@ -1239,7 +1239,6 @@ namespace Edgegap.Editor
 
         private void onCreateDeploymentStartServerFail(EdgegapHttpResult<CreateDeploymentResult> result = null)
         {
-            _deploymentsConnectionStopBtn.visible = false;
             _deploymentsConnectionStatusLabel.text = EdgegapWindowMetadata.WrapRichTextInColor(
                 "Failed to Start", EdgegapWindowMetadata.StatusColors.Error);
             
@@ -1247,9 +1246,11 @@ namespace Edgegap.Editor
                 result?.Error.ErrorMessage ?? "Unknown Error",
                 EdgegapWindowMetadata.StatusColors.Error);
             _deploymentsStatusLabel.style.display = DisplayStyle.Flex;
+            _deploymentsRefreshBtn.SetEnabled(true);
             
             Debug.Log("(!) Check your deployments here: https://app.edgegap.com/deployment-management/deployments/list");
 
+            // Shake "need more servers" btn on 403
             bool reachedNumDeploymentsHardcap = result is { IsResultCode403: true }; 
             if (reachedNumDeploymentsHardcap)
                 shakeNeedMoreGameServersBtn();
@@ -1465,7 +1466,7 @@ namespace Edgegap.Editor
                 ShowBuildWorkInProgress("Updating server info on Edgegap");
                 EdgegapAppApi appApi = getAppApi();
 
-                PortsData[] ports =
+                AppPortsData[] ports =
                 {
                     new()
                     {

@@ -44,7 +44,7 @@ namespace Edgegap.Editor.Api.Models.Requests
 
         /// <summary>*Required: At least 1 { Port, ProtocolStr }.</summary>
         [JsonProperty("ports")]
-        public PortsData[] Ports { get; set; } = {};
+        public AppPortsData[] Ports { get; set; } = {};
         
         /// <summary>The username to access the docker repository</summary>
         [JsonProperty("private_username")]
@@ -179,7 +179,7 @@ namespace Edgegap.Editor.Api.Models.Requests
             this.AppName = appName;
             this.PrivateUsername = containerRegistryUsername;
             this.PrivateToken = containerRegistryPasswordToken;
-            this.Ports = new PortsData[]
+            this.Ports = new AppPortsData[]
             {
                 new()
                 {

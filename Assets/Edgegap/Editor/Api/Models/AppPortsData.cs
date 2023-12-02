@@ -3,9 +3,10 @@ using Newtonsoft.Json;
 namespace Edgegap.Editor.Api.Models
 {
     /// <summary>
-    /// Used in `PortsData` for `UpdateAppVersionRequest`, `CreateAppVersionRequest`.
+    /// Used in `UpdateAppVersionRequest`, `CreateAppVersionRequest`.
+    /// For GetDeploymentStatusResult, see DeploymentPortsData
     /// </summary>
-    public class PortsData
+    public class AppPortsData
     {
         /// <summary>1024~49151; Default 7770</summary>
         [JsonProperty("port")]

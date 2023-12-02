@@ -99,7 +99,17 @@ namespace Edgegap.Editor.Api.Models.Results
                 httpResponse.Content.Headers.ContentType.MediaType == "application/json";
 
             if (isDeserializable)
-                this.Data = JsonConvert.DeserializeObject<TResult>(Json);
+            {
+                try
+                {
+                    this.Data = JsonConvert.DeserializeObject<TResult>(Json);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError($"Error (deserializing EdgegapHttpResult.Data): {e} - json: {Json}");
+                    throw;
+                }
+            }
 
             if (isLogLevelDebug)
                 UnityEngine.Debug.Log($"{typeof(TResult).Name} result: {JObject.Parse(Json)}"); // Prettified

@@ -23,7 +23,7 @@ namespace Edgegap.Editor.Api.Models.Requests
         
         /// <summary>At least 1 { Port, ProtocolStr }</summary>
         [JsonProperty("ports")]
-        public PortsData[] Ports { get; set; } = {};
+        public AppPortsData[] Ports { get; set; } = {};
         
         /// <summary>The Repository where the image is.</summary>
         /// <example>"registry.edgegap.com" || "harbor.edgegap.com" || "docker.io"</example>
