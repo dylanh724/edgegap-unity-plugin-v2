@@ -7,7 +7,7 @@ More information can be found on [Edgegap Documentation](https://docs.edgegap.co
 
 This fork introduces an improved UI for the Edgegap Manager:
 
-![Edgegap Settings Manager](https://i.imgur.com/ttH338r.png)
+![Edgegap Settings Manager](https://i.imgur.com/IZfKF9q.png)
 
 **Not Yet Implemented:**
 
