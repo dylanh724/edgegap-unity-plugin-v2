@@ -97,7 +97,7 @@ namespace Edgegap.Editor
         {
             EdgegapWindowV2 window = GetWindow<EdgegapWindowV2>();
             window.titleContent = new GUIContent("Edgegap Server Management");
-            window.maxSize = new Vector2(635, 860);
+            window.maxSize = new Vector2(635, 900);
             window.minSize = window.maxSize;
         }
 
