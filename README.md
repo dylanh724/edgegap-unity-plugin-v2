@@ -9,12 +9,15 @@ This fork introduces an improved UI for the Edgegap Manager:
 
 ![Edgegap Settings Manager](https://i.imgur.com/IZfKF9q.png)
 
+The following files/dirs are most relevant to the v2 changes:
+
+1. [EdgegapWindowV2.cs](https://github.com/dylanh724/edgegap-unity-plugin-v2/blob/main/Assets/Edgegap/Editor/EdgegapWindowV2.cs)
+2. [Assets/Edgegap/Editor
+/Api/](https://github.com/dylanh724/edgegap-unity-plugin-v2/tree/main/Assets/Edgegap/Editor/Api)
+
 **Not Yet Implemented:**
 
-1. Build & Push button click
-2. Deployments group
-3. Persistence
-4. Manage existing apps
+1. Manage existing apps
 
 ## Installing the package
 
