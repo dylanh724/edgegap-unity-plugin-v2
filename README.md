@@ -12,8 +12,7 @@ This fork introduces an improved UI for the Edgegap Manager:
 **The following files/dirs are most relevant to the v2 changes:**
 
 1. [EdgegapWindowV2.cs](https://github.com/dylanh724/edgegap-unity-plugin-v2/blob/main/Assets/Edgegap/Editor/EdgegapWindowV2.cs)
-2. [Assets/Edgegap/Editor
-/Api/](https://github.com/dylanh724/edgegap-unity-plugin-v2/tree/main/Assets/Edgegap/Editor/Api)
+2. [Assets/Edgegap/Editor/Api/](https://github.com/dylanh724/edgegap-unity-plugin-v2/tree/main/Assets/Edgegap/Editor/Api)
 
 **Not Yet Implemented:**
 
