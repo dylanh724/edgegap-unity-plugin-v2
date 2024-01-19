@@ -5,7 +5,7 @@ More information can be found on [Edgegap Documentation](https://docs.edgegap.co
 
 # v2
 
-This fork introduces an improved UI for the Edgegap Manager:
+This fork introduces an improved UI for the Edgegap Manager and a more-scalable backend for API calls:
 
 ![Edgegap Settings Manager](https://i.imgur.com/IZfKF9q.png)
 
